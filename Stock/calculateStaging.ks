@@ -18,30 +18,32 @@ global function GetStagesData
             "fuelMass", 0,
             "endMass", 0,
             "activationIndex", 0,
-            "stagingIndex", 0,
+            "stageIndex", 0,
             "parts", List(),
-            "tanks", Lexicon(),
-            "engines", Lexicon())).
+            "tanks", List(),
+            "engines", List(),
+            "allEngines", List())).
     }
 
     DisassembleRocketInDecouplingOrder().
-    FROM {local i is 1.} UNTIL i > ship:stageNum STEP {set i to i + 1.} DO
-    {
-        set stagesData[i]["totalMass"] to stagesData[i]["totalMass"] + stagesData[i - 1]["totalMass"].
-    }
     ProcessEngines().
     ProcessFuelTanks().
     SimulateFuelFlow().
+    FROM {local i is 1.} UNTIL i > ship:stageNum STEP {set i to i + 1.} DO
+    {
+        set stagesData[i]["totalMass"] to stagesData[i]["totalMass"] + stagesData[i - 1]["totalMass"].
+        set stagesData[i]["endMass"] to stagesData[i]["endMass"] + stagesData[i - 1]["totalMass"].
+    }
     
-
     // BubbleSort(stagesData, 
     //     {
     //         parameter left, right.
-    //         return choose left["stagingIndex"] > right["stagingIndex"]
+    //         return choose left["stageIndex"] > right["stageIndex"]
     //                if left["activationIndex"] = right["activationIndex"]
     //                else left["activationIndex"] > right["activationIndex"].
     //     }).
 
+    
     return stagesData.
 }
 
@@ -55,7 +57,7 @@ local function DisassembleRocketInDecouplingOrder
         local currentPart is currentNode["part"].
 
         set stagesData[currentStageIndex]["totalMass"] to stagesData[currentStageIndex]["totalMass"] + currentPart:mass.
-        set stagesData[currentStageIndex]["stagingIndex"] to currentStageIndex.
+        set stagesData[currentStageIndex]["stageIndex"] to currentStageIndex.
 
         stagesData[currentStageIndex]["parts"]:Add(currentPart).
         partToStageMap:Add(currentPart, currentStageIndex).
@@ -79,7 +81,11 @@ local function ProcessEngines
             if currentPart:IsType("Engine")
             {
                 set currentStage["activationIndex"] to max(currentStage["activationIndex"], currentPart:stage).
-                currentStage["engines"]:Add(currentPart, List()).
+                currentStage["engines"]:Add(currentPart).
+                FROM {local i is currentStage["stageIndex"].} UNTIL i > currentPart:stage STEP {set i to i + 1.} DO
+                {
+                    stagesData[i]["allEngines"]:Add(currentPart).
+                }
             }
         }
     }
@@ -93,36 +99,19 @@ local function ProcessFuelTanks
         {
             for resource in currentPart:resources
             {
-                for engine in currentStage["engines"]:keys
+                for engine in currentStage["engines"]
                 {
                     if engine:consumedResources:keys:Contains(resource:name)
                     {
-                        if currentStage["tanks"]:HasKey(currentPart) = False
+                        if currentStage["tanks"]:Contains(currentPart) = False
                         {
-                            currentStage["tanks"]:Add(currentPart, List()).
+                            currentStage["tanks"]:Add(currentPart).
                             for fuel in currentPart:resources
                             {
                                 if fuel:enabled
                                 {
                                     set currentStage["fuelMass"] to currentStage["fuelMass"] + fuel:amount * fuel:density.
                                 }
-                            }
-                        }
-
-                        if currentStage["tanks"][currentPart]:Contains(engine) = False
-                        {
-                            currentStage["tanks"][currentPart]:Add(engine).
-                        }
-
-                        if currentStage["engines"][engine]:Contains(currentPart) = False
-                        {
-                            FROM {local i is currentStage["stagingIndex"].} UNTIL i > engine:stage STEP {set i to i + 1.} DO
-                            {
-                                if stagesData[i]["engines"]:HasKey(engine) = False
-                                {
-                                    stagesData[i]["engines"]:Add(engine, List()).
-                                }
-                                stagesData[i]["engines"][engine]:Add(currentPart).
                             }
                         }
                     }
@@ -139,34 +128,30 @@ local function SimulateFuelFlow
         local burnTime is 0. 
         local burnedMass is 0.
         local massFlow is 0.
-        local processedEngines is List().
+        local stageToDrainFrom is 0.
 
-        for tank in stagesData[i]["tanks"]:keys
+        for engine in stagesData[i]["engines"]
         {
-            for engine in stagesData[i]["tanks"][tank]
-            {
-                set massFlow to massFlow + engine:maxMassFlow * engine:thrustLimit / 100.
-                processedEngines:Add(engine).
-            }
+            set massFlow to massFlow + engine:maxMassFlow * engine:thrustLimit / 100.
             set burnTime to stagesData[i]["fuelMass"] / massFlow.
         }
 
-        for engine in stagesData[i]["engines"]:keys
+        for engine in stagesData[i]["allEngines"]
         {
+            set stageToDrainFrom to partToStageMap[engine].
             set stagesData[i]["totalVacuumThrust"] to stagesData[i]["totalVacuumThrust"] + engine:PossibleThrustAt(0).
             set stagesData[i]["totalSLThrust"] to stagesData[i]["totalSLThrust"] + engine:PossibleThrustAt(1).
 
-            if processedEngines:Contains(engine) = False
+            if stagesData[i]["engines"]:Contains(engine) = False
             {
                 set massFlow to massFlow + engine:maxMassFlow * engine:thrustLimit / 100.
-
                 set burnedMass to burnTime * engine:maxMassFlow * engine:thrustLimit / 100.
                 set stagesData[i]["fuelMass"] to stagesData[i]["fuelMass"] + burnedMass.
-                for tank in stagesData[i]["engines"][engine]
-                {
-                    set stagesData[partToStageMap[tank]]["fuelMass"] to stagesData[partToStageMap[tank]]["fuelMass"] - burnedMass.
-                    set stagesData[partToStageMap[tank]]["totalMass"] to stagesData[partToStageMap[tank]]["totalMass"] - burnedMass.
-                }
+                set stagesData[i]["totalMass"] to stagesData[i]["totalMass"] + burnedMass.
+
+                
+                set stagesData[stageToDrainFrom]["fuelMass"] to stagesData[stageToDrainFrom]["fuelMass"] - burnedMass.
+                set stagesData[stageToDrainFrom]["totalMass"] to stagesData[stageToDrainFrom]["totalMass"] - burnedMass.
             }
             set stagesData[i]["massFlow"] to massFlow.
         }
@@ -207,15 +192,27 @@ local function HandleRegularPart
             partsQueue:Push(Lexicon("stageIndex", child:stage + 1, "part", child)).
             set stagesData[child:stage + 1]["activationIndex"] to child:stage + 1.
             
-            if (child:HasModule("ModuleToggleCrossfeed") and child:GetModule("ModuleToggleCrossfeed"):HasEvent("disable crossfeed"))
-            {
-                set stagesData[child:stage + 1]["feedsInto"] to currentStageIndex.
-                stagesData[currentStageIndex]["drainsFrom"]:Add(child:stage + 1).
-            }
+            // if (child:HasModule("ModuleToggleCrossfeed") and child:GetModule("ModuleToggleCrossfeed"):HasEvent("disable crossfeed"))
+            // {
+            //     set stagesData[child:stage + 1]["feedsInto"] to currentStageIndex.
+            //     stagesData[currentStageIndex]["drainsFrom"]:Add(child:stage + 1).
+            // }
         }
         else
         {
             partsQueue:Push(Lexicon("stageIndex", currentStageIndex, "part", child)).
         }
+    }
+}
+
+local function PrintData
+{
+    from {local i is 0.} until i = stagesData:length step {set i to i + 1.} do
+    {
+        print "Stage №: " + i.
+        print "   Wet mass: " + stagesData[i]["totalMass"].
+        print "   Dry mass: " + stagesData[i]["endMass"].
+        print "   SL thrust: " + stagesData[i]["totalSLThrust"].
+        print "   Vacuum thrust: " + stagesData[i]["totalVacuumThrust"].
     }
 }
