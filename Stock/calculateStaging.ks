@@ -19,6 +19,8 @@ global function GetStagesData
             "endMass", 0,
             "activationIndex", 0,
             "stageIndex", 0,
+            "feedsInto", -1,
+            "drainsFrom", -1,
             "parts", List(),
             "tanks", List(),
             "engines", List(),
@@ -27,6 +29,7 @@ global function GetStagesData
 
     DisassembleRocketInDecouplingOrder().
     ProcessEngines().
+    ProcessFuelCrossfeed().
     ProcessFuelTanks().
     SimulateFuelFlow().
     FROM {local i is 1.} UNTIL i > ship:stageNum STEP {set i to i + 1.} DO
@@ -108,7 +111,7 @@ local function ProcessFuelTanks
                             currentStage["tanks"]:Add(currentPart).
                             for fuel in currentPart:resources
                             {
-                                if fuel:enabled
+                                if fuel:enabled and currentStage["activationIndex"] >= currentStage["stageIndex"]
                                 {
                                     set currentStage["fuelMass"] to currentStage["fuelMass"] + fuel:amount * fuel:density.
                                 }
@@ -116,6 +119,36 @@ local function ProcessFuelTanks
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+local function ProcessFuelCrossfeed
+{
+    FROM {local i is ship:stageNum.} UNTIL i < 0 STEP {set i to i - 1.} DO 
+    {
+        if stagesData[i]["feedsInto"] <> -1
+        {
+            FROM {local j is i - 1.} UNTIL j < 0 STEP {set j to j - 1.} DO 
+            {
+                if stagesData[i]["feedsInto"] = stagesData[j]["feedsInto"]
+                {
+                    set stagesData[i]["feedsInto"] to j.
+                    set stagesData[j]["drainsFrom"] to i.
+                    break.
+                }
+            }
+        }
+    }
+
+    for currentStage in stagesData
+    {
+        if currentStage["drainsFrom"] <> -1
+        {
+            for engine in currentStage["engines"]
+            {
+                stagesData[currentStage["drainsFrom"]]["engines"]:Add(engine).
             }
         }
     }
@@ -192,11 +225,11 @@ local function HandleRegularPart
             partsQueue:Push(Lexicon("stageIndex", child:stage + 1, "part", child)).
             set stagesData[child:stage + 1]["activationIndex"] to child:stage + 1.
             
-            // if (child:HasModule("ModuleToggleCrossfeed") and child:GetModule("ModuleToggleCrossfeed"):HasEvent("disable crossfeed"))
-            // {
-            //     set stagesData[child:stage + 1]["feedsInto"] to currentStageIndex.
-            //     stagesData[currentStageIndex]["drainsFrom"]:Add(child:stage + 1).
-            // }
+            if (child:HasModule("ModuleToggleCrossfeed") and child:GetModule("ModuleToggleCrossfeed"):HasEvent("disable crossfeed"))
+            {
+                set stagesData[child:stage + 1]["feedsInto"] to currentStageIndex.
+                set stagesData[currentStageIndex]["drainsFrom"] to child:stage + 1.
+            }
         }
         else
         {
