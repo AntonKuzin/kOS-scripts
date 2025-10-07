@@ -5,17 +5,14 @@ clearVecDraws().
 wait 0.
 
 local engines is ship:engines.
-local thrust is 0.
 local maxMassFlow is 0.
 FOR engine in engines
 {
     if engine:ignition
     {
-        set thrust to thrust + engine:possibleThrust.
         set maxMassFlow to maxMassFlow + engine:maxMassFlow * engine:thrustLimit / 100.
     }
 }
-local ISP is thrust / constant:g0 / maxMassFlow.
 
 local perceivedAcceleration is 0.
 local shipState is Lexicon(
@@ -26,7 +23,7 @@ local shipState is Lexicon(
     "mass", ship:mass,
     "thrustVector", V(0, 0, 0),
     "accelerationVector", V(0, 0, 0),
-    "ISP", ISP).
+    "massFlow", maxMassFlow).
 
 local landingSpot is ship:geoposition.
 VecDrawArgs(
