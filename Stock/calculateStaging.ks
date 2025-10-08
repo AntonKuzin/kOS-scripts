@@ -31,21 +31,14 @@ global function GetStagesData
     ProcessEngines().
     ProcessFuelCrossfeed().
     ProcessFuelTanks().
+    ProcessPayloadStages().
     SimulateFuelFlow().
+    
     FROM {local i is 1.} UNTIL i > ship:stageNum STEP {set i to i + 1.} DO
     {
         set stagesData[i]["totalMass"] to stagesData[i]["totalMass"] + stagesData[i - 1]["totalMass"].
         set stagesData[i]["endMass"] to stagesData[i]["endMass"] + stagesData[i - 1]["totalMass"].
     }
-    
-    // BubbleSort(stagesData, 
-    //     {
-    //         parameter left, right.
-    //         return choose left["stageIndex"] > right["stageIndex"]
-    //                if left["activationIndex"] = right["activationIndex"]
-    //                else left["activationIndex"] > right["activationIndex"].
-    //     }).
-
     
     return stagesData.
 }
@@ -83,13 +76,36 @@ local function ProcessEngines
         {
             if currentPart:IsType("Engine")
             {
-                set currentStage["activationIndex"] to max(currentStage["activationIndex"], currentPart:stage).
-                currentStage["engines"]:Add(currentPart).
+                set currentStage["activationIndex"] to currentPart:stage.
+                if currentPart:stage >= currentStage["stageIndex"]
+                {
+                    currentStage["engines"]:Add(currentPart).
+                }
+                
                 FROM {local i is currentStage["stageIndex"].} UNTIL i > currentPart:stage STEP {set i to i + 1.} DO
                 {
                     stagesData[i]["allEngines"]:Add(currentPart).
                 }
             }
+        }
+    }
+}
+
+local function ProcessPayloadStages
+{
+    for currentStage in stagesData
+    {
+        local payloadCarrierStage is stagesData[currentStage["activationIndex"]].
+        if currentStage["activationIndex"] > currentStage["stageIndex"] and payloadCarrierStage["tanks"]:Empty()
+        {
+            for tank in currentStage["tanks"]
+            {
+                payloadCarrierStage["tanks"]:Add(tank).
+            }
+            set payloadCarrierStage["totalMass"] to payloadCarrierStage["totalMass"] + currentStage["fuelMass"].
+            set payloadCarrierStage["fuelMass"] to payloadCarrierStage["fuelMass"] + currentStage["fuelMass"].
+            set currentStage["totalMass"] to currentStage["totalMass"] - currentStage["fuelMass"].
+            set currentStage["fuelMass"] to 0.
         }
     }
 }
@@ -102,21 +118,29 @@ local function ProcessFuelTanks
         {
             for resource in currentPart:resources
             {
+                local resourceIsCollected is false.
                 for engine in currentStage["engines"]
                 {
-                    if engine:consumedResources:keys:Contains(resource:name)
+                    for key in engine:consumedResources:keys
                     {
-                        if currentStage["tanks"]:Contains(currentPart) = False
+                        if engine:consumedResources[key]:name = resource:name
                         {
-                            currentStage["tanks"]:Add(currentPart).
-                            for fuel in currentPart:resources
+                            set resourceIsCollected to true.
+                            if currentStage["tanks"]:Contains(currentPart) = false
                             {
-                                if fuel:enabled and currentStage["activationIndex"] >= currentStage["stageIndex"]
-                                {
-                                    set currentStage["fuelMass"] to currentStage["fuelMass"] + fuel:amount * fuel:density.
-                                }
+                                currentStage["tanks"]:Add(currentPart).
+                            }
+
+                            if resource:enabled and currentStage["activationIndex"] >= currentStage["stageIndex"]
+                            {
+                                set currentStage["fuelMass"] to currentStage["fuelMass"] + resource:amount * resource:density.
                             }
                         }
+                    }
+
+                    if resourceIsCollected
+                    {
+                        break.
                     }
                 }
             }
@@ -175,7 +199,7 @@ local function SimulateFuelFlow
             set stagesData[i]["totalVacuumThrust"] to stagesData[i]["totalVacuumThrust"] + engine:PossibleThrustAt(0).
             set stagesData[i]["totalSLThrust"] to stagesData[i]["totalSLThrust"] + engine:PossibleThrustAt(1).
 
-            if stagesData[i]["engines"]:Contains(engine) = False
+            if stagesData[i]["engines"]:Contains(engine) = false
             {
                 set massFlow to massFlow + engine:maxMassFlow * engine:thrustLimit / 100.
                 set burnedMass to burnTime * engine:maxMassFlow * engine:thrustLimit / 100.
