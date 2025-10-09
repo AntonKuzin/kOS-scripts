@@ -1,5 +1,4 @@
 @lazyGlobal off.
-RunOncePath("algorithm").
 
 local stagesData is List().
 local partToStageMap is Lexicon().
@@ -21,12 +20,14 @@ global function GetStagesData
             "stageIndex", 0,
             "feedsInto", -1,
             "drainsFrom", -1,
+            "containsFairing", false,
             "parts", List(),
             "tanks", List(),
             "engines", List(),
             "allEngines", List())).
     }
 
+    ProcessFairings().
     DisassembleRocketInDecouplingOrder().
     ProcessEngines().
     ProcessFuelCrossfeed().
@@ -41,6 +42,17 @@ global function GetStagesData
     }
     
     return stagesData.
+}
+
+local function ProcessFairings
+{
+    for part in ship:parts
+    {
+        if part:HasModule("ModuleProceduralFairing") and part:GetModule("ModuleProceduralFairing"):allEvents:Empty() = false
+        {
+            set stagesData[part:stage]["containsFairing"] to true.
+        }
+    }
 }
 
 local function DisassembleRocketInDecouplingOrder 
@@ -74,7 +86,7 @@ local function ProcessEngines
     {
         for currentPart in currentStage["parts"]
         {
-            if currentPart:IsType("Engine")
+            if currentPart:IsType("Engine") and currentPart:HasModule("ModuleDecouple") = false
             {
                 set currentStage["activationIndex"] to currentPart:stage.
                 if currentPart:stage >= currentStage["stageIndex"]
@@ -231,7 +243,12 @@ local function HandleEnginePlate
         }
         else
         {
-            partsQueue:Push(Lexicon("stageIndex", currentStageIndex + 1, "part", child)).
+            local nextStageIndex is currentStageIndex + 1.
+            until stagesData[nextStageIndex]["containsFairing"] = false and nextStageIndex < stagesData:length
+            {
+                set nextStageIndex to nextStageIndex + 1.
+            }
+            partsQueue:Push(Lexicon("stageIndex", nextStageIndex, "part", child)).
         }
     }
 }
@@ -244,15 +261,23 @@ local function HandleRegularPart
 
     for child in part:children
     {
-        if child:IsType("Decoupler") and not child:HasModule("ModuleDynamicNodes")
+        if child:IsType("LaunchClamp")
+            or (child:HasModule("ModuleDecouple") or child:HasModule("ModuleAnchoredDecoupler"))
+            and not child:HasModule("ModuleDynamicNodes")
         {
-            partsQueue:Push(Lexicon("stageIndex", child:stage + 1, "part", child)).
-            set stagesData[child:stage + 1]["activationIndex"] to child:stage + 1.
+            local nextStageIndex is child:stage + 1.
+            until stagesData[nextStageIndex]["containsFairing"] = false and nextStageIndex < stagesData:length
+            {
+                set nextStageIndex to nextStageIndex + 1.
+            }
+
+            partsQueue:Push(Lexicon("stageIndex", nextStageIndex, "part", child)).
+            set stagesData[nextStageIndex]["activationIndex"] to nextStageIndex.
             
             if (child:HasModule("ModuleToggleCrossfeed") and child:GetModule("ModuleToggleCrossfeed"):HasEvent("disable crossfeed"))
             {
-                set stagesData[child:stage + 1]["feedsInto"] to currentStageIndex.
-                set stagesData[currentStageIndex]["drainsFrom"] to child:stage + 1.
+                set stagesData[nextStageIndex]["feedsInto"] to currentStageIndex.
+                set stagesData[currentStageIndex]["drainsFrom"] to nextStageIndex.
             }
         }
         else
