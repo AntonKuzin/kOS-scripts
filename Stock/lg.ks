@@ -44,7 +44,7 @@ local timeStep is 1.
 local simulationSteps is 0.
 local timeLeft is 0.
 local deltaVLeft is 0.
-until false
+until ship:status = "Landed"
 {
     set simulationSteps to 0.
     set timeLeft to 0.
@@ -101,6 +101,8 @@ until false
 
     wait 0.
 }
+
+clearVecDraws().
 
 local function GetTargetCoordinates
 {
