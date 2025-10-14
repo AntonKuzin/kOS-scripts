@@ -5,7 +5,7 @@ local gravityVector is V(0, 0, 0).
 local deltaR is V(0, 0, 0).
 local halfMassFlow is 0.
 
-global function CalculateNextPositionInRotatingFrame
+global function CalculateNextStateInRotatingFrame
 {
     parameter shipState is Lexicon, timeStep is 1.
     
@@ -26,7 +26,7 @@ global function CalculateNextPositionInRotatingFrame
     set shipState["mass"] to shipState["mass"] - halfMassFlow * timeStep.
 }
 
-global function CalculateNextPositionInInertialFrame
+global function CalculateNextStateInInertialFrame
 {
     parameter shipState is Lexicon, timeStep is 1.
     

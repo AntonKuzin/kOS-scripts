@@ -61,9 +61,9 @@ until ship:status = "Landed"
     until shipState["surfaceVelocityVector"]:mag < shipState["accelerationVector"]:mag * timeStep or (shipState["radiusVector"]:mag - body:radius - shipState["surfaceCoordinates"]:terrainHeight) < 1
     {
         if ship:altitude < 100000
-            CalculateNextPositionInRotatingFrame(shipState, timeStep).
+            CalculateNextStateInRotatingFrame(shipState, timeStep).
         else
-            CalculateNextPositionInInertialFrame(shipState, timeStep).
+            CalculateNextStateInInertialFrame(shipState, timeStep).
 
         set simulationSteps to simulationSteps + 1.
         set timeLeft to timeLeft + timeStep.

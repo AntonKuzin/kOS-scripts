@@ -3,14 +3,10 @@ RunOncePath("motionPrediction").
 clearscreen.
 wait 0.
 
-local engines is ship:engines.
-local maxMassFlow is 0.
-FOR engine in engines
+local massFlow is 0.
+FOR engine in ship:engines
 {
-    if engine:ignition
-    {
-        set maxMassFlow to maxMassFlow + engine:maxMassFlow * engine:thrustLimit / 100.
-    }
+    set massFlow to massFlow + engine:massFlow.
 }
 
 local shipState is Lexicon(
@@ -21,7 +17,7 @@ local shipState is Lexicon(
     "mass", ship:mass,
     "thrustVector", V(0, 0, 0),
     "accelerationVector", V(0, 0, 0),
-    "massFlow", maxMassFlow).
+    "massFlow", massFlow).
 
 local previousTime is TimeStamp().
 local currentTime is TimeStamp().
@@ -35,6 +31,12 @@ until ship:altitude < 100000
     print "Surface velocity difference: " + (ship:velocity:surface - shipState["surfaceVelocityVector"]):mag.
     print "Position difference: " + (ship:position - body:position - shipState["radiusVector"]):mag.
 
+    set massFlow to 0.
+    FOR engine in ship:engines
+    {
+        set massFlow to massFlow + engine:massFlow.
+    }
+    set shipState["massFlow"] to massFlow.
     set shipState["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).
 
     set previousTime to currentTime.
@@ -44,7 +46,7 @@ until ship:altitude < 100000
 
     FROM {local i is substeps.} UNTIL i = 0 STEP {set i to i-1.} DO
     {
-        CalculateNextPositionInInertialFrame(shipState, timeStep).
+        CalculateNextStateInInertialFrame(shipState, timeStep).
     }
 }
 

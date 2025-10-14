@@ -26,7 +26,7 @@ until orbit:apoapsis >= targetAltitude
     set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
     until predictedOrbit:apoapsis >= targetAltitude or shipState["radiusVector"]:mag - body:radius < 0
     {
-        CalculateNextPositionInRotatingFrame(shipState, timeStep).
+        CalculateNextStateInRotatingFrame(shipState, timeStep).
         if shipState["mass"] <= stagesData[currentStage]["endMass"]
         {
             set currentStage to currentStage - 1.
