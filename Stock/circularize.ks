@@ -14,12 +14,14 @@ FOR engine in ship:engines
 }
 set exhaustVelocity to thrust / maxMassFlow.
 
+lock steering to ship:velocity:surface.
+wait until ship:altitude > 70000.
+
 local targetHorizontalSpeedVector is VectorExclude(body:position, velocity:orbit):normalized * sqrt(body:mu / body:position:mag).
 local aimVector is targetHorizontalSpeedVector - velocity:orbit.
 local burnTime is -ship:mass * (1 - constant:e ^ (aimVector:mag / exhaustVelocity)) / maxMassFlow.
 
 lock steering to aimVector.
-
 until eta:apoapsis < burnTime / 2
 {
     clearScreen.
@@ -41,7 +43,13 @@ until aimVector:mag < 0.01
 {
     clearScreen.
     print "DeltaV to burn: " + Round(aimVector:mag, 2).
-    
+
+    if ship:thrust = 0
+    {
+        stage.
+        wait until ship:thrust > 0.
+    }
+
     set acceleration to ship:thrust / ship:mass.
     set ship:control:pilotMainThrottle to min(1, aimVector:mag / acceleration / 10).
 

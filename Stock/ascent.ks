@@ -44,6 +44,8 @@ until orbit:apoapsis >= targetAltitude
     wait timeStep.
 }
 
+RunPath("circularize").
+
 local function GetEnginesThrust
 {
     local parameter engines is List().
