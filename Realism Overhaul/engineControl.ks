@@ -11,7 +11,8 @@ for engine in ship:engines
 	{
 		ramJetEngines:add(engine:GetModule("ModuleEnginesAJERamjet")).
 	}
-	else if engine:HasModule("ModuleEnginesAJEJet")
+	
+	if engine:HasModule("ModuleEnginesAJEJet")
 	{
 		jetEngines:add(engine:GetModule("ModuleEnginesAJEJet")).
 	}
@@ -54,7 +55,7 @@ if ramJetEngines:LENGTH > 0 or jetEngines:LENGTH > 0
 			for engine in jetEngines
 			{
 				engine:SetField("thrust limiter", jetEngineThrustLimit).
-				if jetEngineThrustLimit < 45
+				if engine:GetField("thrust") < 1
 				{
 					if engine:HasEvent("shutdown engine")
 					{
