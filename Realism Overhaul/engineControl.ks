@@ -24,11 +24,11 @@ if ramJetEngines:LENGTH > 0 or jetEngines:LENGTH > 0
 {
 	print "managing engines".
 	local ramJetEngineSample is ramJetEngines[0].
-	local maxRamJetEngineTemp is ramJetEngineSample:GetField("maxEngineTemp") - 2.
+	local maxRamJetEngineTemp is ramJetEngineSample:GetHiddenField("maxEngineTemp") - 2.
 	local ramJetEngineThrustLimit is 100.
 	
 	local jetEngineSample is jetEngines[0].
-	local maxJetEngineTemp is jetEngineSample:GetField("maxEngineTemp") - 2.
+	local maxJetEngineTemp is jetEngineSample:GetHiddenField("maxEngineTemp") - 2.
 	local jetEngineThrustLimit is 79.5.
 	
 	until false
