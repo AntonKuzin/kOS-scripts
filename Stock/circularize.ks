@@ -39,7 +39,7 @@ set ship:control:pilotMainThrottle to 1.
 wait until ship:thrust > 0.
 
 local acceleration is ship:thrust / ship:mass.
-until aimVector:mag < 0.01
+until targetHorizontalSpeedVector:mag < velocity:orbit:mag
 {
     clearScreen.
     print "DeltaV to burn: " + Round(aimVector:mag, 2).
@@ -50,11 +50,14 @@ until aimVector:mag < 0.01
         wait until ship:thrust > 0.
     }
 
-    set acceleration to ship:thrust / ship:mass.
-    set ship:control:pilotMainThrottle to min(1, aimVector:mag / acceleration / 10).
-
+    set acceleration to ship:thrust / ship:mass. 
     set targetHorizontalSpeedVector to VectorExclude(body:position, velocity:orbit):normalized * sqrt(body:mu / body:position:mag).
     set aimVector to targetHorizontalSpeedVector - velocity:orbit.
+
+    if aimVector:mag / acceleration <= 1
+    {
+        set ship:control:pilotMainThrottle to max(0.01, ship:control:pilotMainThrottle / 2).
+    }
 
     wait 0.
 }
