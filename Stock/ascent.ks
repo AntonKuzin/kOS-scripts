@@ -1,6 +1,46 @@
 @lazyGlobal off.
 RunOncePath("calculateStaging").
 RunOncePath("motionPrediction").
+clearVecDraws().
+
+local parameter LAN is -1.
+local parameter inclination is orbit:inclination.
+
+if LAN <> -1
+{
+    local launchTimeOffset is 60.
+    local targetAngularDifference is ArcSin(tan(orbit:inclination) / tan(inclination)).
+    local launchOnAscendingPass is 1.
+    local headingOffset is 90 - ArcSin(Cos(inclination) / Cos(orbit:inclination)).
+
+    local targetANVector is AngleAxis(LAN, -Sun:Up:topVector) * solarPrimeVector.
+    local equatorialPlaneVector is vectorExclude(-Sun:Up:topVector, ship:position - body:position).
+    local currentAngularDifference is VectorAngle(targetANVector, equatorialPlaneVector).
+    local timeToWait is (currentAngularDifference - launchOnAscendingPass * targetAngularDifference) / (body:angularvel:mag * constant:radtodeg).
+    local previousTimeToWait is timeToWait.
+
+    until timeToWait <= launchTimeOffset
+    {
+        set targetANVector to AngleAxis(LAN, -Sun:Up:topVector) * solarPrimeVector.
+        set equatorialPlaneVector to vectorExclude(-Sun:Up:topVector, ship:position - body:position).
+        set currentAngularDifference to VectorAngle(targetANVector, equatorialPlaneVector).
+        set timeToWait to (currentAngularDifference - launchOnAscendingPass * targetAngularDifference) / (body:angularvel:mag * constant:radtodeg).
+
+        clearScreen.
+        print "Time to wait: " + Round(timeToWait - launchTimeOffset, 0).
+        print "Heading: " + Round(90 - launchOnAscendingPass * headingOffset, 1).
+
+        if timeToWait > previousTimeToWait
+        {
+            set timeToWait to 1e9.
+            set LAN to LAN + 180.
+            set launchOnAscendingPass to launchOnAscendingPass * -1.
+        }
+        set previousTimeToWait to timeToWait.
+
+        wait min(1, timeToWait - launchTimeOffset).
+    }
+}
 
 local parameter targetAltitude is 75000.
 local timeStep is 1.
@@ -15,6 +55,7 @@ until orbit:apoapsis >= targetAltitude
     if currentStage > ship:stageNum
     {
         set currentStage to ship:stageNum.
+        wait until stage:ready.
         set stagesData to GetStagesData().
     }
     set currentStage to ship:stageNum.
