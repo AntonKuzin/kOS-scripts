@@ -19,15 +19,8 @@ local timeStep is 0.
 local timeGuess is ship:orbit:period / 4.
 local guessAdjustmentStep is timeGuess / 2.
 
-local shipState is Lexicon(
-    "radiusVector", PositionAt(ship, TimeStamp() + timeGuess) - body:position,
-    "surfaceCoordinates", ship:geoPosition,
-    "velocityVector", VelocityAt(ship, TimeStamp() + timeGuess):orbit,
-    "surfaceVelocityVector", VelocityAt(ship, TimeStamp() + timeGuess):surface,
-    "mass", ship:mass,
-    "thrustVector", V(0, 0, 0),
-    "accelerationVector", V(0, 0, 0),
-    "massFlow", maxMassFlow).
+local shipState is CreateShipState().
+set shipState["massFlow"] to maxMassFlow.
 
 set timeStep to 1.
 local landingSpot is ship:geoposition.
@@ -37,13 +30,28 @@ VecDrawArgs(
     red, "Here", 1, true).
 
 local targetCoordinates is GetTargetCoordinates().
+local searchCriterion is DoNothing.
+local printAdditionalInfo is DoNothing.
+local resetSearchParameters is DoNothing.
+if targetCoordinates:LAT <> 0 and targetCoordinates:LNG <> 0
+{
+    set searchCriterion to CheckDistance@.
+    set printAdditionalInfo to PrintTargetAimingInfo@.
+    set resetSearchParameters to AdjustExistingSolution@.
+}
+else
+{
+    set searchCriterion to CheckAltitude@.
+    set resetSearchParameters to StartFromScratch@.
+}
+
 local errorVector is V(0, 0, 0).
 local normalVector is V(0, 0, 0).
 local targetVector is V(0, 0, 0).
 local overshoot is 0.
 local sideslip is 0.
 
-local initialShipSpeedVector is shipState["surfaceVelocityVector"].
+local initialShipSpeedVector is shipState["velocityVector"].
 local ititialTime is TimeStamp().
 
 local simulationSteps is 0.
@@ -80,33 +88,23 @@ until false
         set deltaVLeft to deltaVLeft + shipState["accelerationVector"]:mag * timeStep.
         set shipState["thrustVector"] to shipState["surfaceVelocityVector"]:normalized * thrust.
     }
-    
-    set errorVector to targetVector - shipState["radiusVector"].
-    set errorVector to VectorExclude(targetVector, errorVector).
-
-    set normalVector to VectorCrossProduct(targetVector, initialShipSpeedVector).
-    //make it pointing from ship to target parallel to the ground
-    set targetVector to VectorExclude(targetVector, initialShipSpeedVector).
-    
-    set overshoot to errorVector:mag * cos(VectorAngle(-errorVector, targetVector)).
-    set sideslip to errorVector:mag * cos(VectorAngle(errorVector, normalVector)).
 
     if guessAdjustmentStep < 0.1
     {
-        set landingSpot to shipState["surfaceCoordinates"].
-        set ititialTime to TimeStamp().
-        set guessAdjustmentStep to 10.
-        
         clearScreen.
         print "Predicted velocity: " + Round(shipState["surfaceVelocityVector"]:mag, 2).
         print "Predicted altitude: " + Round((shipState["radiusVector"]:mag - body:radius), 2).
         print "Predicted radar altitude: " + Round((shipState["radiusVector"]:mag - body:radius - shipState["surfaceCoordinates"]:terrainHeight), 2).
         print "Simulation time: " + Round(timeLeft, 2).
+        print "PDI in: " + Round(timeGuess, 2).
         print "Required delta-V: " + Round(deltaVLeft, 2).
-        print "Overshoot: " + Round(overshoot, 2).
-        print "Left side slip: " + Round(sideslip, 2).
+        printAdditionalInfo:call().
+        
+        set landingSpot to shipState["surfaceCoordinates"].
+        set ititialTime to TimeStamp().
+        resetSearchParameters:call().
     }
-    else if overshoot > 0
+    else if searchCriterion:call()
     {
         set timeGuess to timeGuess - guessAdjustmentStep.
     }
@@ -131,4 +129,39 @@ local function GetTargetCoordinates
         return target:geoPosition.    
 
     return LatLng(0, 0).
+}
+
+local function CheckAltitude
+{
+    return shipState["radiusVector"]:mag - body:radius - shipState["surfaceCoordinates"]:terrainHeight < 0.
+}
+
+local function CheckDistance
+{
+    set errorVector to targetVector - shipState["radiusVector"].
+    set errorVector to VectorExclude(targetVector, errorVector).
+
+    set normalVector to VectorCrossProduct(targetVector, initialShipSpeedVector).
+    //make it pointing from ship to target parallel to the ground
+    set targetVector to VectorExclude(targetVector, initialShipSpeedVector).
+    
+    set overshoot to errorVector:mag * cos(VectorAngle(-errorVector, targetVector)).
+    set sideslip to errorVector:mag * cos(VectorAngle(errorVector, normalVector)).
+    return overshoot > 0.
+}
+
+local function PrintTargetAimingInfo
+{
+    print "Overshoot: " + Round(overshoot, 2).
+    print "Side slip: " + Round(sideslip, 2).
+}
+
+local function StartFromScratch
+{
+    set guessAdjustmentStep to ship:orbit:period / 16.
+}
+
+local function AdjustExistingSolution
+{
+    set guessAdjustmentStep to 10.
 }
