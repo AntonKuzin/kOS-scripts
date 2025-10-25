@@ -10,21 +10,25 @@ if LAN <> -1
 {
     local launchTimeOffset is 60.
     local targetAngularDifference is ArcSin(tan(orbit:inclination) / tan(inclination)).
+    local launchSiteInNorthernHemisphere is 
+        choose 1
+        if VectorAngle(-body:position, Sun:Up:topVector) < 90
+        else -1.
     local launchOnAscendingPass is 1.
     local headingOffset is 90 - ArcSin(Cos(inclination) / Cos(orbit:inclination)).
 
-    local targetANVector is AngleAxis(LAN, -Sun:Up:topVector) * solarPrimeVector.
+    local targetNodeVector is AngleAxis(LAN + launchSiteInNorthernHemisphere * launchOnAscendingPass * targetAngularDifference, -Sun:Up:topVector) * solarPrimeVector.
     local equatorialPlaneVector is vectorExclude(-Sun:Up:topVector, ship:position - body:position).
-    local currentAngularDifference is VectorAngle(targetANVector, equatorialPlaneVector).
-    local timeToWait is (currentAngularDifference - launchOnAscendingPass * targetAngularDifference) / (body:angularvel:mag * constant:radtodeg).
+    local currentAngularDifference is VectorAngle(targetNodeVector, equatorialPlaneVector).
+    local timeToWait is currentAngularDifference / (body:angularvel:mag * constant:radtodeg).
     local previousTimeToWait is timeToWait.
 
     until timeToWait <= launchTimeOffset
     {
-        set targetANVector to AngleAxis(LAN, -Sun:Up:topVector) * solarPrimeVector.
+        set targetNodeVector to AngleAxis(LAN + launchSiteInNorthernHemisphere * launchOnAscendingPass * targetAngularDifference, -Sun:Up:topVector) * solarPrimeVector.
         set equatorialPlaneVector to vectorExclude(-Sun:Up:topVector, ship:position - body:position).
-        set currentAngularDifference to VectorAngle(targetANVector, equatorialPlaneVector).
-        set timeToWait to (currentAngularDifference - launchOnAscendingPass * targetAngularDifference) / (body:angularvel:mag * constant:radtodeg).
+        set currentAngularDifference to VectorAngle(targetNodeVector, equatorialPlaneVector).
+        set timeToWait to currentAngularDifference / (body:angularvel:mag * constant:radtodeg).
 
         clearScreen.
         print "Time to wait: " + Round(timeToWait - launchTimeOffset, 0).
