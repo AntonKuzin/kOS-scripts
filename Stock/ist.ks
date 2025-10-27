@@ -133,7 +133,8 @@ local function GetTargetCoordinates
 
 local function CheckAltitude
 {
-    return shipState["radiusVector"]:mag - body:radius >= shipState["surfaceCoordinates"]:terrainHeight.
+    return shipState["radiusVector"]:mag - body:radius < shipState["surfaceCoordinates"]:terrainHeight
+        or timeGuess > orbit:period / 2.
 }
 
 local function CheckDistance
