@@ -4,20 +4,7 @@ clearscreen.
 wait 0.
 
 local massFlow is 0.
-FOR engine in ship:engines
-{
-    set massFlow to massFlow + engine:massFlow.
-}
-
-local shipState is Lexicon(
-    "radiusVector", ship:position - body:position,
-    "surfaceCoordinates", ship:geoPosition,
-    "velocityVector", ship:velocity:orbit,
-    "surfaceVelocityVector", ship:velocity:surface,
-    "mass", ship:mass,
-    "thrustVector", V(0, 0, 0),
-    "accelerationVector", V(0, 0, 0),
-    "massFlow", massFlow).
+local shipState is CreateShipState().
 
 local previousTime is TimeStamp().
 local currentTime is TimeStamp().
