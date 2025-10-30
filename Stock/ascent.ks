@@ -5,6 +5,7 @@ clearVecDraws().
 
 local parameter LAN is -1.
 local parameter inclination is orbit:inclination.
+local parameter targetAltitude is 75000.
 
 if LAN <> -1
 {
@@ -46,7 +47,6 @@ if LAN <> -1
     }
 }
 
-local parameter targetAltitude is 75000.
 local timeStep is 1.
 
 local stagesData is GetStagesData().
