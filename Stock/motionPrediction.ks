@@ -18,10 +18,11 @@ global function CalculateNextStateInRotatingFrame
 
     set deltaR to shipState["surfaceVelocityVector"] * timeStep + (shipState["accelerationVector"] + gravityVector) * (timeStep ^ 2) / 2.
     set shipState["radiusVector"] to shipState["radiusVector"] + deltaR.
+    set shipState["altitude"] to shipState["radiusVector"]:mag - body:radius.
     set shipState["surfaceCoordinates"] to body:GeopositionOf(shipState["radiusVector"] + body:position).
     set shipState["velocityVector"] to shipState["velocityVector"] + (shipState["accelerationVector"] + gravityVector) * timeStep.
     set shipState["velocityVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeStep, -body:angularvel) * shipState["velocityVector"].
-    set shipState["surfaceVelocityVector"] to shipState["velocityVector"] + -shipState["surfaceCoordinates"]:AltitudeVelocity(shipState["radiusVector"]:mag - body:radius):orbit.
+    set shipState["surfaceVelocityVector"] to shipState["velocityVector"] + -shipState["surfaceCoordinates"]:AltitudeVelocity(shipState["altitude"]):orbit.
     
     set shipState["mass"] to shipState["mass"] - halfMassFlow * timeStep.
 }
@@ -39,9 +40,10 @@ global function CalculateNextStateInInertialFrame
 
     set deltaR to shipState["velocityVector"] * timeStep + (shipState["accelerationVector"] + gravityVector) * (timeStep ^ 2) / 2.
     set shipState["radiusVector"] to shipState["radiusVector"] + deltaR.
+    set shipState["altitude"] to shipState["radiusVector"]:mag - body:radius.
     set shipState["surfaceCoordinates"] to body:GeopositionOf(shipState["radiusVector"] + body:position).
     set shipState["velocityVector"] to shipState["velocityVector"] + (shipState["accelerationVector"] + gravityVector) * timeStep.
-    set shipState["surfaceVelocityVector"] to shipState["velocityVector"] + -shipState["surfaceCoordinates"]:AltitudeVelocity(shipState["radiusVector"]:mag - body:radius):orbit.
+    set shipState["surfaceVelocityVector"] to shipState["velocityVector"] + -shipState["surfaceCoordinates"]:AltitudeVelocity(shipState["altitude"]):orbit.
     
     set shipState["mass"] to shipState["mass"] - halfMassFlow * timeStep.
 }
@@ -50,6 +52,7 @@ global function CalculateNextStateInInertialFrame
  {
     return Lexicon(
         "radiusVector", ship:position - body:position,
+        "altitude", ship:altitude,
         "surfaceCoordinates", ship:geoPosition,
         "velocityVector", ship:velocity:orbit,
         "surfaceVelocityVector", ship:velocity:surface,

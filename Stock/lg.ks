@@ -58,7 +58,7 @@ until ship:status = "Landed"
     set perceivedAcceleration to ship:thrust / ship:mass.
     set shipState["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).
 
-    until shipState["surfaceVelocityVector"]:mag < shipState["accelerationVector"]:mag * timeStep or (shipState["radiusVector"]:mag - body:radius - shipState["surfaceCoordinates"]:terrainHeight) < 1
+    until shipState["surfaceVelocityVector"]:mag < shipState["accelerationVector"]:mag * timeStep or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
     {
         if ship:altitude < 100000
             CalculateNextStateInRotatingFrame(shipState, timeStep).
@@ -74,8 +74,8 @@ until ship:status = "Landed"
 
     clearScreen.
     print "Predicted velocity: " + Round(shipState["surfaceVelocityVector"]:mag, 2).
-    print "Predicted altitude: " + Round((shipState["radiusVector"]:mag - body:radius), 2).
-    print "Predicted radar altitude: " + Round((shipState["radiusVector"]:mag - body:radius - shipState["surfaceCoordinates"]:terrainHeight), 2).
+    print "Predicted altitude: " + Round(shipState["altitude"], 2).
+    print "Predicted radar altitude: " + Round(shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight, 2).
     print "Simulation time: " + Round(timeLeft, 2).
     print "Required delta-V: " + Round(deltaVLeft, 2).
 
