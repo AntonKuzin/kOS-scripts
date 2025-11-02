@@ -1,6 +1,7 @@
 @lazyGlobal off.
 RunOncePath("calculateStaging").
 RunOncePath("motionPrediction").
+RunOncePath("drag").
 clearVecDraws().
 
 local parameter LAN is -1.
@@ -53,6 +54,8 @@ local stagesData is GetStagesData().
 local shipState is CreateShipState().
 local predictedOrbit is CREATEORBIT(-body:position, velocity:orbit, body, 0).
 
+local dragCoefficient is 0.
+local dragForce is 0.
 local currentStage is ship:stageNum.
 until orbit:apoapsis >= targetAltitude
 {
@@ -63,28 +66,34 @@ until orbit:apoapsis >= targetAltitude
         set stagesData to GetStagesData().
     }
     set currentStage to ship:stageNum.
-    
+
     set shipState to CreateShipState().
-    set shipState["thrustVector"] to ship:facing * V(0, 0, -GetEnginesThrust(stagesData[currentStage]["allEngines"], shipState["radiusVector"]:mag - body:radius)).
+    set shipState["thrustVector"] to ship:facing * V(0, 0, -ship:thrust).
     set shipState["massFlow"] to stagesData[currentStage]["massFlow"].
 
+    set dragCoefficient to GetCurrentDragCoefficient(shipState).
+
     set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
-    until predictedOrbit:apoapsis >= targetAltitude or shipState["radiusVector"]:mag - body:radius < 0
+    until ship:velocity:surface:mag < 1 or predictedOrbit:apoapsis >= targetAltitude or shipState["altitude"] < 0
     {
         CalculateNextStateInRotatingFrame(shipState, timeStep).
         if shipState["mass"] <= stagesData[currentStage]["endMass"]
         {
+            set dragCoefficient to 0.
             set currentStage to currentStage - 1.
             set shipState["mass"] to stagesData[currentStage]["totalMass"].
             set shipState["massFlow"] to stagesData[currentStage]["massFlow"].
         }
-        set shipState["thrustVector"] to -shipState["surfaceVelocityVector"]:normalized * GetEnginesThrust(stagesData[currentStage]["allEngines"], shipState["radiusVector"]:mag - body:radius).
+
+        local ro is body:atm:AltitudePressure(shipState["altitude"]) * constant:atmTokPa / (constant:IdealGas / body:atm:molarMass * body:atm:AltitudeTemperature(shipState["altitude"])).
+        set dragForce to ro * shipState["surfaceVelocityVector"]:mag ^ 2 * dragCoefficient / 2.
+        set shipState["thrustVector"] to -shipState["surfaceVelocityVector"]:normalized * (GetEnginesThrust(stagesData[currentStage]["allEngines"], shipState["altitude"]) - dragForce).
 
         set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
     }
 
     clearScreen.
-    print "Altitude: " + Round(shipState["radiusVector"]:mag - body:radius, 2).
+    print "Altitude: " + Round(shipState["altitude"], 2).
     print "Velocity: " + Round(shipState["surfaceVelocityVector"]:mag, 2).
     wait timeStep.
 }
