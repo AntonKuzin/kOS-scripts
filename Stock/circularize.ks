@@ -1,45 +1,40 @@
 @lazyGlobal off.
+RunOncePath("calculateStaging").
 clearScreen.
 
-local thrust is 0.
-local maxMassFlow is 0.
-local exhaustVelocity is 0.
-FOR engine in ship:engines
-{
-    if engine:ignition
-    {
-        set thrust to thrust + engine:possibleThrust.
-        set maxMassFlow to maxMassFlow + engine:maxMassFlow * engine:thrustLimit / 100.
-    }
-}
-set exhaustVelocity to thrust / maxMassFlow.
-
+set ship:control:pilotMainThrottle to 0.
 lock steering to ship:velocity:surface.
-wait until ship:altitude > 70000.
+local stagesData is GetStagesData().
 
-local targetHorizontalSpeedVector is VectorExclude(body:position, velocity:orbit):normalized * sqrt(body:mu / body:position:mag).
-local aimVector is targetHorizontalSpeedVector - velocity:orbit.
-local burnTime is -ship:mass * (1 - constant:e ^ (aimVector:mag / exhaustVelocity)) / maxMassFlow.
+local targetOrbitalSpeedVector is VectorExclude(body:position, velocity:orbit):normalized * sqrt(body:mu / body:position:mag).
+local aimVector is targetOrbitalSpeedVector - velocity:orbit.
 
-lock steering to aimVector.
+local requiredDeltaV is aimVector:mag.
+local burnTime is GetBurnTime(requiredDeltaV).
+
 until eta:apoapsis < burnTime / 2
 {
     clearScreen.
     print "Coasting to apoapsis: " + Round(eta:apoapsis - (burnTime / 2), 2).
     print "DeltaV to burn: " + Round(aimVector:mag, 2).
 
-    set targetHorizontalSpeedVector to VectorExclude(body:position, velocity:orbit):normalized * sqrt(body:mu / body:position:mag).
-    set aimVector to targetHorizontalSpeedVector - velocity:orbit.
-    set burnTime to -ship:mass * (1 - constant:e ^ (aimVector:mag / exhaustVelocity)) / maxMassFlow.
+    set targetOrbitalSpeedVector to VectorExclude(body:position, velocity:orbit):normalized * sqrt(body:mu / body:position:mag).
+    set aimVector to targetOrbitalSpeedVector - velocity:orbit.
+    
+    set requiredDeltaV to aimVector:mag.
+    set burnTime to GetBurnTime(requiredDeltaV).
 
     wait 1.
 }
+
+lock steering to aimVector.
+wait until VectorAngle(aimVector, ship:facing:forevector) < 1.
 
 set ship:control:pilotMainThrottle to 1.
 wait until ship:thrust > 0.
 
 local acceleration is ship:thrust / ship:mass.
-until targetHorizontalSpeedVector:mag < velocity:orbit:mag
+until targetOrbitalSpeedVector:mag < velocity:orbit:mag
 {
     clearScreen.
     print "DeltaV to burn: " + Round(aimVector:mag, 2).
@@ -51,8 +46,8 @@ until targetHorizontalSpeedVector:mag < velocity:orbit:mag
     }
 
     set acceleration to ship:thrust / ship:mass. 
-    set targetHorizontalSpeedVector to VectorExclude(body:position, velocity:orbit):normalized * sqrt(body:mu / body:position:mag).
-    set aimVector to targetHorizontalSpeedVector - velocity:orbit.
+    set targetOrbitalSpeedVector to VectorExclude(body:position, velocity:orbit):normalized * sqrt(body:mu / body:position:mag).
+    set aimVector to targetOrbitalSpeedVector - velocity:orbit.
 
     if aimVector:mag / acceleration <= 1
     {
@@ -64,3 +59,25 @@ until targetHorizontalSpeedVector:mag < velocity:orbit:mag
 
 set ship:control:pilotMainThrottle to 0.
 unlock steering.
+
+local function GetBurnTime
+{
+    local parameter requiredDeltaV.
+
+    local burnTime is 0.
+    local exhaustVelocity is 1.
+
+    local currentStage is ship:stageNum.
+    local stageDeltaV is 1.
+    until requiredDeltaV <= 0 or currentStage < 0
+    {
+        set exhaustVelocity to stagesData[currentStage]["totalVacuumThrust"] / stagesData[currentStage]["massFlow"].
+        set stageDeltaV to exhaustVelocity * ln(stagesData[currentStage]["totalMass"] / stagesData[currentStage]["endMass"]).
+        set burnTime to burnTime + -stagesData[currentStage]["totalMass"] * (1 - constant:e ^ (min(stageDeltaV, requiredDeltaV) / exhaustVelocity)) / stagesData[currentStage]["massFlow"].
+
+        set requiredDeltaV to requiredDeltaV - stageDeltaV.
+        set currentStage to currentStage - 1.
+    }
+
+    return burnTime.
+}
