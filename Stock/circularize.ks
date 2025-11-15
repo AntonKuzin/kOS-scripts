@@ -23,6 +23,7 @@ until TimeStamp():seconds > burnStartTime
 {
     UpdateShipState(shipState).
     set shipState["radiusVector"] to PositionAt(ship, burnStartTime) - body:position.
+    set shipState["velocityVector"] to VelocityAt(ship, burnStartTime):orbit.
     set shipState["surfaceVelocityVector"] to VelocityAt(ship, burnStartTime):surface.
 
     RunPredictorCorrectorIteration().
@@ -35,7 +36,7 @@ until TimeStamp():seconds > burnStartTime
     print "DeltaV to burn: " + Round(requiredDeltaV, 2).
     print "Orbital insertion altitude: " + Round(shipState["altitude"], 0).
 
-    wait 0.
+    wait 1.
 }
 
 lock steering to aimVector.
