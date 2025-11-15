@@ -85,7 +85,7 @@ until orbit:apoapsis >= targetAltitude
             set shipState["massFlow"] to stagesData[currentStage]["massFlow"].
         }
 
-        local ro is body:atm:AltitudePressure(shipState["altitude"]) * constant:atmTokPa / (constant:IdealGas / body:atm:molarMass * body:atm:AltitudeTemperature(shipState["altitude"])).
+        local ro is body:atm:AltitudePressure(shipState["altitude"]) * constant:atmTokPa / (constant:IdealGas / body:atm:molarMass * body:atm:AltitudeTemperature(min(69999, shipState["altitude"]))).
         set dragForce to ro * shipState["surfaceVelocityVector"]:mag ^ 2 * dragCoefficient / 2.
         set shipState["thrustVector"] to -shipState["surfaceVelocityVector"]:normalized * (GetEnginesThrust(stagesData[currentStage]["allEngines"], shipState["altitude"]) - dragForce).
 
