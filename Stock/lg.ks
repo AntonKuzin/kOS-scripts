@@ -47,6 +47,7 @@ until ship:status = "Landed"
     set shipState["radiusVector"] to ship:position - body:position.
     set shipState["velocityVector"] to velocity:orbit.
     set shipState["surfaceVelocityVector"] to velocity:surface.
+    set shipState["altitude"] to ship:altitude.
 
     set perceivedAcceleration to ship:thrust / ship:mass.
     set shipState["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).

@@ -70,6 +70,7 @@ until false
     set shipState["radiusVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeGuess, -body:angularvel) * shipState["radiusVector"].
     set shipState["velocityVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeGuess, -body:angularvel) * shipState["velocityVector"].
     set shipState["surfaceVelocityVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeGuess, -body:angularvel) * shipState["surfaceVelocityVector"].
+    set shipState["altitude"] to shipState["radiusVector"]:mag - body:radius.
 
     set initialShipSpeedVector to shipState["velocityVector"].
     set targetVector to targetCoordinates:position - body:position.
