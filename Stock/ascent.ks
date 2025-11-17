@@ -54,7 +54,6 @@ local stagesData is GetStagesData().
 local shipState is CreateShipState().
 local predictedOrbit is CREATEORBIT(-body:position, velocity:orbit, body, 0).
 
-local dragCoefficient is 0.
 local dragForce is 0.
 local currentStage is ship:stageNum.
 until orbit:apoapsis >= targetAltitude
@@ -71,23 +70,19 @@ until orbit:apoapsis >= targetAltitude
     set shipState["thrustVector"] to ship:facing * V(0, 0, -ship:thrust).
     set shipState["massFlow"] to stagesData[currentStage]["massFlow"].
 
-    set dragCoefficient to GetCurrentDragCoefficient(shipState).
-
     set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
     until ship:velocity:surface:mag < 1 or predictedOrbit:apoapsis >= targetAltitude or shipState["altitude"] < 0
     {
         CalculateNextStateInRotatingFrame(shipState, timeStep).
-        if shipState["mass"] <= stagesData[currentStage]["endMass"]
+        if shipState["mass"] <= stagesData[currentStage]["endMass"] and currentStage > 0
         {
-            set dragCoefficient to 0.
             set currentStage to currentStage - 1.
             set shipState["mass"] to stagesData[currentStage]["totalMass"].
             set shipState["massFlow"] to stagesData[currentStage]["massFlow"].
         }
 
-        local ro is body:atm:AltitudePressure(shipState["altitude"]) * constant:atmTokPa / (constant:IdealGas / body:atm:molarMass * body:atm:AltitudeTemperature(min(69999, shipState["altitude"]))).
-        set dragForce to ro * shipState["surfaceVelocityVector"]:mag ^ 2 * dragCoefficient / 2.
-        set shipState["thrustVector"] to -shipState["surfaceVelocityVector"]:normalized * (GetEnginesThrust(stagesData[currentStage]["allEngines"], shipState["altitude"]) - dragForce).
+        set shipState["externalForcesVector"] to GetAeroForcesVector(shipState["altitude"], shipState["surfaceVelocityVector"]).
+        set shipState["thrustVector"] to -shipState["surfaceVelocityVector"]:normalized * GetEnginesThrust(stagesData[currentStage]["allEngines"], shipState["altitude"]).
 
         set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
     }
@@ -113,4 +108,14 @@ local function GetEnginesThrust
     }
 
     return totalThrust.
+}
+
+local function GetAeroForcesVector
+{
+    local parameter currentAltitude is 0, velocityVector is V(0, 0, 0).
+    
+    local aeroForcesVector is addons:far:AeroForceAt(currentAltitude, ship:facing:foreVector * velocityVector:mag).
+    set aeroForcesVector to RotateFromTo(ship:facing:foreVector, velocityVector) * aeroForcesVector.
+    
+    return aeroForcesVector.
 }
