@@ -17,15 +17,8 @@ FOR engine in engines
 }
 
 local perceivedAcceleration is 0.
-local shipState is Lexicon(
-    "radiusVector", ship:position - body:position,
-    "surfaceCoordinates", ship:geoPosition,
-    "velocityVector", ship:velocity:orbit,
-    "surfaceVelocityVector", ship:velocity:surface,
-    "mass", ship:mass,
-    "thrustVector", V(0, 0, 0),
-    "accelerationVector", V(0, 0, 0),
-    "massFlow", maxMassFlow).
+local shipState is CreateShipState().
+set shipState["massFlow"] to maxMassFlow.
 
 local landingSpot is ship:geoposition.
 VecDrawArgs(

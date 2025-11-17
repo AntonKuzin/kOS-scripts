@@ -104,7 +104,7 @@ local function RunPredictorCorrectorIteration
 
     set shipState["massFlow"] to stagesData[currentStage]["massFlow"].
     set shipState["thrustVector"] to -aimVector:normalized * stagesData[currentStage]["totalVacuumThrust"].
-
+    
     set integrationSteps to 0.
     until shipState["velocityVector"]:mag >= targetOrbitalSpeedVector:mag and shipState["mass"] >= stagesData[0]["endMass"]
     {
