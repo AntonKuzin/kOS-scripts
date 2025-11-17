@@ -14,7 +14,7 @@ global function CalculateNextStateInRotatingFrame
     
     set halfMassFlow to shipState["massFlow"] / 2.
     set shipState["mass"] to shipState["mass"] - halfMassFlow * timeStep.
-    set shipState["accelerationVector"] to -shipState["thrustVector"] / shipState["mass"].
+    set shipState["accelerationVector"] to (-shipState["thrustVector"] + shipState["externalForcesVector"]) / shipState["mass"].
 
     set deltaR to shipState["surfaceVelocityVector"] * timeStep + (shipState["accelerationVector"] + gravityVector) * (timeStep ^ 2) / 2.
     set shipState["radiusVector"] to shipState["radiusVector"] + deltaR.
@@ -36,7 +36,7 @@ global function CalculateNextStateInInertialFrame
     
     set halfMassFlow to shipState["massFlow"] / 2.
     set shipState["mass"] to shipState["mass"] - halfMassFlow * timeStep.
-    set shipState["accelerationVector"] to -shipState["thrustVector"] / shipState["mass"].
+    set shipState["accelerationVector"] to (-shipState["thrustVector"] + shipState["externalForcesVector"]) / shipState["mass"].
 
     set deltaR to shipState["velocityVector"] * timeStep + (shipState["accelerationVector"] + gravityVector) * (timeStep ^ 2) / 2.
     set shipState["radiusVector"] to shipState["radiusVector"] + deltaR.
@@ -58,6 +58,7 @@ global function CalculateNextStateInInertialFrame
         "surfaceVelocityVector", ship:velocity:surface,
         "mass", ship:mass,
         "thrustVector", V(0, 0, 0),
+        "externalForcesVector", V(0, 0, 0),
         "accelerationVector", V(0, 0, 0),
         "massFlow", 0).
  }
