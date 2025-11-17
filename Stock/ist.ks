@@ -160,7 +160,7 @@ local function PrintTargetAimingInfo
 
 local function StartFromScratch
 {
-    set guessAdjustmentStep to ship:orbit:period / 8.
+    set guessAdjustmentStep to ship:orbit:period / 16.
 }
 
 local function AdjustExistingSolution
