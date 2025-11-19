@@ -8,17 +8,18 @@ lock steering to ship:velocity:surface.
 local stagesData is GetStagesData().
 local shipState is CreateShipState().
 
-local initialOrbitalInsertionSpeedVector is VelocityAt(ship, TimeStamp() + eta:apoapsis):orbit.
-local targetOrbitalSpeedVector is initialOrbitalInsertionSpeedVector:normalized * sqrt(body:mu / (PositionAt(ship, TimeStamp() + eta:apoapsis) - body:position):mag).
+local burnStartTime is TimeStamp() + eta:apoapsis.
+local initialOrbitalInsertionSpeedVector is VelocityAt(ship, burnStartTime):orbit.
+local targetOrbitalSpeedVector is initialOrbitalInsertionSpeedVector:normalized * sqrt(body:mu / (PositionAt(ship, burnStartTime) - body:position):mag).
 
 local aimVector is targetOrbitalSpeedVector - initialOrbitalInsertionSpeedVector.
 
 local requiredDeltaV is aimVector:mag.
 local burnTime is GetBurnTime(requiredDeltaV).
+set burnStartTime to burnStartTime - burnTime / 2.
 
 local timeStep is 1.
 local integrationSteps is 0.
-local burnStartTime is TimeStamp() + eta:apoapsis - burnTime / 2.
 until TimeStamp():seconds > burnStartTime
 {
     UpdateShipState(shipState).
