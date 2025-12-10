@@ -9,8 +9,8 @@ local stagesData is GetStagesData().
 local shipState is CreateShipState().
 
 local burnStartTime is TimeStamp() + eta:apoapsis.
-local initialOrbitalInsertionSpeedVector is VelocityAt(ship, burnStartTime):orbit.
-local targetOrbitalSpeedVector is initialOrbitalInsertionSpeedVector:normalized * sqrt(body:mu / (PositionAt(ship, burnStartTime) - body:position):mag).
+local initialOrbitalInsertionSpeedVector is GetVectorAdjustedForRotation(VelocityAt(ship, burnStartTime):orbit, eta:apoapsis).
+local targetOrbitalSpeedVector is initialOrbitalInsertionSpeedVector:normalized * sqrt(body:mu / targetAltitude).
 
 local aimVector is targetOrbitalSpeedVector - initialOrbitalInsertionSpeedVector.
 
@@ -23,9 +23,9 @@ local integrationSteps is 0.
 until TimeStamp():seconds > burnStartTime
 {
     UpdateShipState(shipState).
-    set shipState["radiusVector"] to PositionAt(ship, burnStartTime) - body:position.
-    set shipState["velocityVector"] to VelocityAt(ship, burnStartTime):orbit.
-    set shipState["surfaceVelocityVector"] to VelocityAt(ship, burnStartTime):surface.
+    set shipState["radiusVector"] to GetVectorAdjustedForRotation(PositionAt(ship, burnStartTime) - body:position, eta:apoapsis + burnTime / 2).
+    set shipState["velocityVector"] to GetVectorAdjustedForRotation(VelocityAt(ship, burnStartTime):orbit, eta:apoapsis + burnTime / 2).
+    set shipState["surfaceVelocityVector"] to GetVectorAdjustedForRotation(VelocityAt(ship, burnStartTime):surface, eta:apoapsis + burnTime / 2).
 
     RunPredictorCorrectorIteration().
 
@@ -116,6 +116,7 @@ local function RunPredictorCorrectorIteration
             set shipState["massFlow"] to stagesData[currentStage]["massFlow"].
             set shipState["thrustVector"] to -aimVector:normalized * stagesData[currentStage]["totalVacuumThrust"].
         }
+
         CalculateNextStateInRotatingFrame(shipState, timeStep).
         
         set integrationSteps to integrationSteps + 1.
@@ -128,4 +129,11 @@ local function RunPredictorCorrectorIteration
     
     set targetOrbitalSpeedVector to VectorExclude(shipState["radiusVector"], shipState["velocityVector"]):normalized * sqrt(body:mu / shipState["radiusVector"]:mag).
     set aimVector to aimVector + (targetOrbitalSpeedVector - shipState["velocityVector"]).
+}
+
+local function GetVectorAdjustedForRotation
+{
+    local parameter vector, timeOffset.
+
+    return AngleAxis(body:angularvel:mag * constant:radtodeg * timeOffset, -body:angularvel) * vector.
 }
