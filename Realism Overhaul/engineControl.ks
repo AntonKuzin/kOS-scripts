@@ -1,76 +1,87 @@
+@lazyGlobal off.
+
 WAIT UNTIL SHIP:UNPACKED.
 CORE:PART:GETMODULE("kOSProcessor"):DOEVENT("Open Terminal").
+clearScreen.
 print "Automatic engine control script loaded".
 
-local ramJetEngines is List().
-local jetEngines is List().
-
+local adjustmentStep is 0.5.
+local allEngines is Lexicon().
 for engine in ship:engines
 {
 	if engine:HasModule("ModuleEnginesAJERamjet")
 	{
-		ramJetEngines:add(engine:GetModule("ModuleEnginesAJERamjet")).
+		local module is engine:GetModule("ModuleEnginesAJERamjet").
+		allEngines:Add(module, Lexicon(
+			"delegate", HandleRamjetEngine@,
+			"maxEngineTemperature", module:GetHiddenField("maxEngineTemp") - 2,
+			"thrustLimit", 100
+		)).
 	}
 	
 	if engine:HasModule("ModuleEnginesAJEJet")
 	{
-		jetEngines:add(engine:GetModule("ModuleEnginesAJEJet")).
+		local module is engine:GetModule("ModuleEnginesAJEJet").
+		allEngines:Add(module, Lexicon(
+			"delegate", HandleJetEngine@,
+			"maxEngineTemperature", module:GetHiddenField("maxEngineTemp") - 2,
+			"thrustLimit", 80
+		)).
 	}
 }
 
-local adjustmentStep is 0.5.
-
-if ramJetEngines:LENGTH > 0 or jetEngines:LENGTH > 0
+if allEngines:length > 0
 {
 	print "managing engines".
-	local ramJetEngineSample is ramJetEngines[0].
-	local maxRamJetEngineTemp is ramJetEngineSample:GetHiddenField("maxEngineTemp") - 2.
-	local ramJetEngineThrustLimit is 100.
-	
-	local jetEngineSample is jetEngines[0].
-	local maxJetEngineTemp is jetEngineSample:GetHiddenField("maxEngineTemp") - 2.
-	local jetEngineThrustLimit is 79.5.
 	
 	until false
 	{
-		if ramJetEngineThrustLimit <> ramJetEngineSample:GetField("thrust limiter")
+		for engine in allEngines:keys
 		{
-			set ramJetEngineThrustLimit to ramJetEngineSample:GetField("thrust limiter").
+			allEngines[engine]["delegate"]:call(engine, allEngines[engine]).
 		}
 
-		local ramJetEngineTemp is ramJetEngineSample:GetField("eng. internal temp").
-		if ramJetEngineTemp >= maxRamJetEngineTemp
-		{
-			set ramJetEngineThrustLimit to max(0, ramJetEngineThrustLimit - adjustmentStep).
-			for engine in ramJetEngines
-			{
-				engine:SetField("thrust limiter", ramJetEngineThrustLimit).
-			}
-		}
-
-		local jetEngineTemp is jetEngineSample:GetField("eng. internal temp").
-		if jetEngineTemp >= maxJetEngineTemp
-		{
-			set jetEngineThrustLimit to max(0, jetEngineThrustLimit - adjustmentStep).
-			for engine in jetEngines
-			{
-				engine:SetField("thrust limiter", jetEngineThrustLimit).
-				if engine:GetField("thrust") < 1
-				{
-					if engine:HasEvent("shutdown engine")
-					{
-						engine:DoEvent("shutdown engine").
-						print "shutting down jet engine".
-					}
-				}
-			}
-		}
-
-		wait 0.05.
+		wait 0.
 	}
-	print "stopping script".
 }
 else
 {
 	print "No engines detected, stopping script".
+}
+
+local function HandleJetEngine
+{
+	local parameter engine, engineData is Lexicon().
+
+	if engine:GetField("eng. internal temp") >= engineData["maxEngineTemperature"]
+	{
+		set engineData["thrustLimit"] to max(0, engineData["thrustLimit"] - adjustmentStep).
+
+		if engine:GetField("thrust") < 1
+		{
+			if engine:HasEvent("shutdown engine")
+			{
+				engine:DoEvent("shutdown engine").
+				set engineData["thrustLimit"] to 80.
+			}
+		}
+
+		engine:SetField("thrust limiter", engineData["thrustLimit"]).
+	}
+}
+
+local function HandleRamjetEngine
+{
+	local parameter engine, engineData is Lexicon().
+
+	if engineData["thrustLimit"] <> engine:GetField("thrust limiter")
+	{
+		set engineData["thrustLimit"] to engine:GetField("thrust limiter").
+	}
+
+	if engine:GetField("eng. internal temp") >= engineData["maxEngineTemperature"]
+	{
+		set engineData["thrustLimit"] to max(0, engineData["thrustLimit"] - adjustmentStep).
+		engine:SetField("thrust limiter", engineData["thrustLimit"]).
+	}
 }
