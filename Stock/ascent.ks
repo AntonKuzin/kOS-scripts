@@ -54,7 +54,6 @@ local stagesData is GetStagesData().
 local shipState is CreateShipState().
 local predictedOrbit is CREATEORBIT(-body:position, velocity:orbit, body, 0).
 
-local dragForce is 0.
 local currentStage is ship:stageNum.
 until orbit:apoapsis >= targetAltitude
 {
