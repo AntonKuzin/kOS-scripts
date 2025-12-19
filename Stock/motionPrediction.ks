@@ -16,8 +16,9 @@ global function CalculateNextStateInRotatingFrame
     set shipState["mass"] to shipState["mass"] - halfMassFlow * timeStep.
     set shipState["accelerationVector"] to (-shipState["thrustVector"] + shipState["externalForcesVector"]) / shipState["mass"].
 
-    set deltaR to shipState["surfaceVelocityVector"] * timeStep + (shipState["accelerationVector"] + gravityVector) * (timeStep ^ 2) / 2.
+    set deltaR to shipState["velocityVector"] * timeStep + (shipState["accelerationVector"] + gravityVector) * (timeStep ^ 2) / 2.
     set shipState["radiusVector"] to shipState["radiusVector"] + deltaR.
+    set shipState["radiusVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeStep, -body:angularvel) * shipState["radiusVector"].
     set shipState["altitude"] to shipState["radiusVector"]:mag - body:radius.
     set shipState["surfaceCoordinates"] to body:GeopositionOf(shipState["radiusVector"] + body:position).
     set shipState["velocityVector"] to shipState["velocityVector"] + (shipState["accelerationVector"] + gravityVector) * timeStep.
