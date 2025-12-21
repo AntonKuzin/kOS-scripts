@@ -16,15 +16,19 @@ FOR engine in engines
     }
 }
 
-local perceivedAcceleration is 0.
+local currentAcceleration is thrust / ship:mass.
 local shipState is CreateShipState().
-set shipState["massFlow"] to maxMassFlow.
+local auxiliaryShipState is CreateShipState().
+local stateChangeSources is CreateStateChangeSources().
+set stateChangeSources["massFlow"] to maxMassFlow.
+local localGsmall is body:mu / shipState["radiusVector"]:mag ^ 2.
+set stateChangeSources["gravitationalAccelerationVector"] to -shipState["radiusVector"]:normalized * localGsmall.
 
 local landingSpot is ship:geoposition.
 VecDrawArgs(
-    { return landingSpot:AltitudePosition(landingSpot:terrainHeight + max(20, (shipState["radiusVector"] + body:position):mag / 10)). },
-    { return landingSpot:position - landingSpot:AltitudePosition(landingSpot:terrainHeight + max(20, (shipState["radiusVector"] + body:position):mag / 10)). },
-    red, "Here", 1, true).
+    { return landingSpot:AltitudePosition(landingSpot:terrainHeight + max(5, alt:radar / 5)). },
+    { return landingSpot:position - landingSpot:AltitudePosition(landingSpot:terrainHeight + max(5, alt:radar / 5)). },
+    red, "", 1, true, 0.05).
 
 local targetCoordinates is GetTargetCoordinates().
 local errorVector is V(0, 0, 0).
@@ -33,36 +37,50 @@ local targetVector is V(0, 0, 0).
 local overshoot is 0.
 local sideslip is 0.
 
-local timeStep is 1.
+local timeStep is 4.
+local clampedTimeStep is timeStep.
 local simulationSteps is 0.
 local timeLeft is 0.
-local deltaVLeft is 0.
 until ship:status = "Landed"
 {
     set simulationSteps to 0.
     set timeLeft to 0.
-    set deltaVLeft to 0.
 
-    set shipState["mass"] to ship:mass.
-    set shipState["radiusVector"] to ship:position - body:position.
-    set shipState["velocityVector"] to velocity:orbit.
-    set shipState["surfaceVelocityVector"] to velocity:surface.
-    set shipState["altitude"] to ship:altitude.
+    UpdateShipState(shipState).
+    set currentAcceleration to thrust / shipState["mass"].
 
-    set perceivedAcceleration to ship:thrust / ship:mass.
-    set shipState["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).
+    UpdateShipState(auxiliaryShipState).
+    set stateChangeSources["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).
+    set localGsmall to body:mu / shipState["radiusVector"]:mag ^ 2.
+    set stateChangeSources["gravitationalAccelerationVector"] to -auxiliaryShipState["radiusVector"]:normalized * localGsmall.
 
-    until shipState["surfaceVelocityVector"]:mag < shipState["accelerationVector"]:mag * timeStep or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
+    until shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
     {
+        set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / currentAcceleration).
         if ship:altitude < 100000
-            CalculateNextStateInRotatingFrame(shipState, timeStep).
+        {
+            CalculateNextStateInRotatingFrame(auxiliaryShipState, stateChangeSources, clampedTimeStep / 2).
+            set stateChangeSources["thrustVector"] to auxiliaryShipState["surfaceVelocityVector"]:normalized * thrust.
+            set localGsmall to body:mu / auxiliaryShipState["radiusVector"]:mag ^ 2.
+            set stateChangeSources["gravitationalAccelerationVector"] to -auxiliaryShipState["radiusVector"]:normalized * localGsmall.
+            CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
+            set auxiliaryShipState["mass"] to shipState["mass"].
+            set auxiliaryShipState["altitude"] to shipState["altitude"].
+            set auxiliaryShipState["surfaceCoordinates"] to shipState["surfaceCoordinates"].
+            set auxiliaryShipState["radiusVector"] to shipState["radiusVector"].
+            set auxiliaryShipState["surfaceVelocityVector"] to shipState["surfaceVelocityVector"].
+            set auxiliaryShipState["velocityVector"] to shipState["velocityVector"].
+        }
         else
             CalculateNextStateInInertialFrame(shipState, timeStep).
 
+        set currentAcceleration to thrust / shipState["mass"].
+        set stateChangeSources["thrustVector"] to shipState["surfaceVelocityVector"]:normalized * thrust.
+        set localGsmall to body:mu / shipState["radiusVector"]:mag ^ 2.
+        set stateChangeSources["gravitationalAccelerationVector"] to -shipState["radiusVector"]:normalized * localGsmall.
+
         set simulationSteps to simulationSteps + 1.
-        set timeLeft to timeLeft + timeStep.
-        set deltaVLeft to deltaVLeft + shipState["accelerationVector"]:mag * timeStep.
-        set shipState["thrustVector"] to shipState["surfaceVelocityVector"]:normalized * thrust.
+        set timeLeft to timeLeft + clampedTimeStep.
     }
     set landingSpot to shipState["surfaceCoordinates"].
 
@@ -71,7 +89,6 @@ until ship:status = "Landed"
     print "Predicted altitude: " + Round(shipState["altitude"], 2).
     print "Predicted radar altitude: " + Round(shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight, 2).
     print "Simulation time: " + Round(timeLeft, 2).
-    print "Required delta-V: " + Round(deltaVLeft, 2).
 
     if targetCoordinates:lat <> 0 or targetCoordinates:lng <> 0
     {
@@ -87,10 +104,10 @@ until ship:status = "Landed"
         set sideslip to errorVector:mag * cos(VectorAngle(errorVector, normalVector)).
 
         print "Overshoot: " + Round(overshoot, 2).
-        print "Left side slip: " + Round(sideslip, 2).
+        print "Side slip: " + Round(sideslip, 2).
     }
 
-    if perceivedAcceleration > 0.5 and  simulationSteps < 200
+    if simulationSteps < 100
         set timeStep to max(timeStep / 2, 0.05).
 
     wait 0.

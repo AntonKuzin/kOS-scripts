@@ -19,15 +19,21 @@ local timeStep is 0.
 local timeGuess is ship:orbit:period / 4.
 local guessAdjustmentStep is timeGuess / 2.
 
+local currentAcceleration is thrust / ship:mass.
 local shipState is CreateShipState().
-set shipState["massFlow"] to maxMassFlow.
+local auxiliaryShipState is CreateShipState().
+local stateChangeSources is CreateStateChangeSources().
+set stateChangeSources["massFlow"] to maxMassFlow.
+local localGsmall is body:mu / shipState["radiusVector"]:mag ^ 2.
+set stateChangeSources["gravitationalAccelerationVector"] to -shipState["radiusVector"]:normalized * localGsmall.
 
-set timeStep to 1.
+set timeStep to 4.
+local clampedTimeStep is timeStep.
 local landingSpot is ship:geoposition.
 VecDrawArgs(
-    { return landingSpot:AltitudePosition(landingSpot:terrainHeight + max(20, (shipState["radiusVector"] + body:position):mag / 10)). },
-    { return landingSpot:position - landingSpot:AltitudePosition(landingSpot:terrainHeight + max(20, (shipState["radiusVector"] + body:position):mag / 10)). },
-    red, "Here", 1, true).
+    { return landingSpot:AltitudePosition(landingSpot:terrainHeight + max(5, alt:radar / 5)). },
+    { return landingSpot:position - landingSpot:AltitudePosition(landingSpot:terrainHeight + max(5, alt:radar / 5)). },
+    red, "", 1, true, 0.05).
 
 local targetCoordinates is GetTargetCoordinates().
 local searchCriterion is DoNothing.
@@ -72,22 +78,43 @@ until false
     set shipState["surfaceVelocityVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeGuess, -body:angularvel) * shipState["surfaceVelocityVector"].
     set shipState["altitude"] to shipState["radiusVector"]:mag - body:radius.
 
-    set initialShipSpeedVector to shipState["velocityVector"].
-    set targetVector to targetCoordinates:position - body:position.
+    set auxiliaryShipState["mass"] to ship:mass.
+    set auxiliaryShipState["radiusVector"] to shipState["radiusVector"].
+    set auxiliaryShipState["velocityVector"] to shipState["velocityVector"].
+    set auxiliaryShipState["surfaceVelocityVector"] to shipState["surfaceVelocityVector"].
+    set stateChangeSources["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).
+    set localGsmall to body:mu / shipState["radiusVector"]:mag ^ 2.
+    set stateChangeSources["gravitationalAccelerationVector"] to -auxiliaryShipState["radiusVector"]:normalized * localGsmall.
 
-    set shipState["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).
-
-    until shipState["surfaceVelocityVector"]:mag < shipState["accelerationVector"]:mag * timeStep or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
+    set currentAcceleration to thrust / shipState["mass"].
+    until shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
     {
+        set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / currentAcceleration).
         if ship:altitude < 100000
-            CalculateNextStateInRotatingFrame(shipState, timeStep).
+        {
+            CalculateNextStateInRotatingFrame(auxiliaryShipState, stateChangeSources, clampedTimeStep / 2).
+            set stateChangeSources["thrustVector"] to auxiliaryShipState["surfaceVelocityVector"]:normalized * thrust.
+            set localGsmall to body:mu / auxiliaryShipState["radiusVector"]:mag ^ 2.
+            set stateChangeSources["gravitationalAccelerationVector"] to -auxiliaryShipState["radiusVector"]:normalized * localGsmall.
+            CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
+            set auxiliaryShipState["mass"] to shipState["mass"].
+            set auxiliaryShipState["altitude"] to shipState["altitude"].
+            set auxiliaryShipState["surfaceCoordinates"] to shipState["surfaceCoordinates"].
+            set auxiliaryShipState["radiusVector"] to shipState["radiusVector"].
+            set auxiliaryShipState["surfaceVelocityVector"] to shipState["surfaceVelocityVector"].
+            set auxiliaryShipState["velocityVector"] to shipState["velocityVector"].
+        }
         else
             CalculateNextStateInInertialFrame(shipState, timeStep).
 
+        set currentAcceleration to thrust / shipState["mass"].
+        set stateChangeSources["thrustVector"] to shipState["surfaceVelocityVector"]:normalized * thrust.
+        set localGsmall to body:mu / shipState["radiusVector"]:mag ^ 2.
+        set stateChangeSources["gravitationalAccelerationVector"] to -shipState["radiusVector"]:normalized * localGsmall.
+
         set simulationSteps to simulationSteps + 1.
-        set timeLeft to timeLeft + timeStep.
-        set deltaVLeft to deltaVLeft + shipState["accelerationVector"]:mag * timeStep.
-        set shipState["thrustVector"] to shipState["surfaceVelocityVector"]:normalized * thrust.
+        set timeLeft to timeLeft + clampedTimeStep.
+        set deltaVLeft to deltaVLeft + currentAcceleration * clampedTimeStep.
     }
 
     if guessAdjustmentStep < 0.1
