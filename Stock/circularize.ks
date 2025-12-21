@@ -13,7 +13,6 @@ local initialVelocityVector is GetVectorAdjustedForRotation(VelocityAt(ship, bur
 local targetOrbitalSpeedVector is initialVelocityVector:normalized * sqrt(body:mu / (PositionAt(ship, burnStartTime) - body:position):mag).
 
 local aimVector is targetOrbitalSpeedVector - initialVelocityVector.
-local aimCorrectionVector is V(0, 0, 0).
 
 local requiredDeltaV is aimVector:mag.
 local burnTime is GetBurnTime(requiredDeltaV).
@@ -131,15 +130,7 @@ local function RunPredictorCorrectorIteration
     }
     
     set targetOrbitalSpeedVector to VectorExclude(shipState["radiusVector"], shipState["velocityVector"]):normalized * sqrt(body:mu / shipState["radiusVector"]:mag).
-    set aimCorrectionVector to targetOrbitalSpeedVector - shipState["velocityVector"].
-    if aimCorrectionVector:mag < 0.01
-    {
-        set aimVector to targetOrbitalSpeedVector - initialVelocityVector.
-    }
-    else
-    {
-        set aimVector to aimVector + aimCorrectionVector.
-    }
+    set aimVector to aimVector + (targetOrbitalSpeedVector - shipState["velocityVector"]).
 }
 
 local function GetVectorAdjustedForRotation
