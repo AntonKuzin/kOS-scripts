@@ -41,10 +41,12 @@ local timeStep is 4.
 local clampedTimeStep is timeStep.
 local simulationSteps is 0.
 local timeLeft is 0.
+local deltaVLeft is 0.
 until ship:status = "Landed"
 {
     set simulationSteps to 0.
     set timeLeft to 0.
+    set deltaVLeft to 0.
 
     UpdateShipState(shipState).
     set currentAcceleration to thrust / shipState["mass"].
@@ -81,6 +83,7 @@ until ship:status = "Landed"
 
         set simulationSteps to simulationSteps + 1.
         set timeLeft to timeLeft + clampedTimeStep.
+        set deltaVLeft to deltaVLeft + currentAcceleration * clampedTimeStep.
     }
     set landingSpot to shipState["surfaceCoordinates"].
 
@@ -89,6 +92,7 @@ until ship:status = "Landed"
     print "Predicted altitude: " + Round(shipState["altitude"], 2).
     print "Predicted radar altitude: " + Round(shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight, 2).
     print "Simulation time: " + Round(timeLeft, 2).
+    print "Required delta-V: " + Round(deltaVLeft, 2).
 
     if targetCoordinates:lat <> 0 or targetCoordinates:lng <> 0
     {

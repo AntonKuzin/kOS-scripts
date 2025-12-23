@@ -85,8 +85,10 @@ until false
     set stateChangeSources["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).
     set localGsmall to body:mu / shipState["radiusVector"]:mag ^ 2.
     set stateChangeSources["gravitationalAccelerationVector"] to -auxiliaryShipState["radiusVector"]:normalized * localGsmall.
-
     set currentAcceleration to thrust / shipState["mass"].
+
+    set initialShipSpeedVector to shipState["velocityVector"].
+    set targetVector to targetCoordinates:position - body:position.
     until shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
     {
         set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / currentAcceleration).
