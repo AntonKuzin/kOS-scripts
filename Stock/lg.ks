@@ -21,8 +21,6 @@ local shipState is CreateShipState().
 local auxiliaryShipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
 set stateChangeSources["massFlow"] to maxMassFlow.
-local localGsmall is body:mu / shipState["radiusVector"]:mag ^ 2.
-set stateChangeSources["gravitationalAccelerationVector"] to -shipState["radiusVector"]:normalized * localGsmall.
 
 local landingSpot is ship:geoposition.
 VecDrawArgs(
@@ -53,8 +51,6 @@ until ship:status = "Landed"
 
     UpdateShipState(auxiliaryShipState).
     set stateChangeSources["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).
-    set localGsmall to body:mu / shipState["radiusVector"]:mag ^ 2.
-    set stateChangeSources["gravitationalAccelerationVector"] to -auxiliaryShipState["radiusVector"]:normalized * localGsmall.
 
     until shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
     {
@@ -63,8 +59,6 @@ until ship:status = "Landed"
         {
             CalculateNextStateInRotatingFrame(auxiliaryShipState, stateChangeSources, clampedTimeStep / 2).
             set stateChangeSources["thrustVector"] to auxiliaryShipState["surfaceVelocityVector"]:normalized * thrust.
-            set localGsmall to body:mu / auxiliaryShipState["radiusVector"]:mag ^ 2.
-            set stateChangeSources["gravitationalAccelerationVector"] to -auxiliaryShipState["radiusVector"]:normalized * localGsmall.
             CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
             set auxiliaryShipState["mass"] to shipState["mass"].
             set auxiliaryShipState["altitude"] to shipState["altitude"].
@@ -78,8 +72,6 @@ until ship:status = "Landed"
 
         set currentAcceleration to thrust / shipState["mass"].
         set stateChangeSources["thrustVector"] to shipState["surfaceVelocityVector"]:normalized * thrust.
-        set localGsmall to body:mu / shipState["radiusVector"]:mag ^ 2.
-        set stateChangeSources["gravitationalAccelerationVector"] to -shipState["radiusVector"]:normalized * localGsmall.
 
         set simulationSteps to simulationSteps + 1.
         set timeLeft to timeLeft + clampedTimeStep.
