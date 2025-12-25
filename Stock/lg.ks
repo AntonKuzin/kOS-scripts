@@ -18,8 +18,8 @@ FOR engine in engines
 
 local currentAcceleration is thrust / ship:mass.
 local shipState is CreateShipState().
-local auxiliaryShipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
+set stateChangeSources["thrustVectorDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * thrust. }.
 set stateChangeSources["massFlow"] to maxMassFlow.
 
 local landingSpot is ship:geoposition.
@@ -49,29 +49,17 @@ until ship:status = "Landed"
     UpdateShipState(shipState).
     set currentAcceleration to thrust / shipState["mass"].
 
-    UpdateShipState(auxiliaryShipState).
-    set stateChangeSources["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).
-
     until shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
     {
         set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / currentAcceleration).
         if ship:altitude < 100000
         {
-            CalculateNextStateInRotatingFrame(auxiliaryShipState, stateChangeSources, clampedTimeStep / 2).
-            set stateChangeSources["thrustVector"] to auxiliaryShipState["surfaceVelocityVector"]:normalized * thrust.
             CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
-            set auxiliaryShipState["mass"] to shipState["mass"].
-            set auxiliaryShipState["altitude"] to shipState["altitude"].
-            set auxiliaryShipState["surfaceCoordinates"] to shipState["surfaceCoordinates"].
-            set auxiliaryShipState["radiusVector"] to shipState["radiusVector"].
-            set auxiliaryShipState["surfaceVelocityVector"] to shipState["surfaceVelocityVector"].
-            set auxiliaryShipState["velocityVector"] to shipState["velocityVector"].
         }
         else
-            CalculateNextStateInInertialFrame(shipState, timeStep).
+            CalculateNextStateInInertialFrame(shipState, stateChangeSources, clampedTimeStep).
 
         set currentAcceleration to thrust / shipState["mass"].
-        set stateChangeSources["thrustVector"] to shipState["surfaceVelocityVector"]:normalized * thrust.
 
         set simulationSteps to simulationSteps + 1.
         set timeLeft to timeLeft + clampedTimeStep.

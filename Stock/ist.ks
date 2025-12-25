@@ -21,8 +21,8 @@ local guessAdjustmentStep is timeGuess / 2.
 
 local currentAcceleration is thrust / ship:mass.
 local shipState is CreateShipState().
-local auxiliaryShipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
+set stateChangeSources["thrustVectorDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * thrust. }.
 set stateChangeSources["massFlow"] to maxMassFlow.
 
 set timeStep to 4.
@@ -76,11 +76,6 @@ until false
     set shipState["surfaceVelocityVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeGuess, -body:angularvel) * shipState["surfaceVelocityVector"].
     set shipState["altitude"] to shipState["radiusVector"]:mag - body:radius.
 
-    set auxiliaryShipState["mass"] to ship:mass.
-    set auxiliaryShipState["radiusVector"] to shipState["radiusVector"].
-    set auxiliaryShipState["velocityVector"] to shipState["velocityVector"].
-    set auxiliaryShipState["surfaceVelocityVector"] to shipState["surfaceVelocityVector"].
-    set stateChangeSources["thrustVector"] to SHIP:FACING * V(0, 0, -ship:thrust).
     set currentAcceleration to thrust / shipState["mass"].
 
     set initialShipSpeedVector to shipState["velocityVector"].
@@ -90,21 +85,12 @@ until false
         set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / currentAcceleration).
         if ship:altitude < 100000
         {
-            CalculateNextStateInRotatingFrame(auxiliaryShipState, stateChangeSources, clampedTimeStep / 2).
-            set stateChangeSources["thrustVector"] to auxiliaryShipState["surfaceVelocityVector"]:normalized * thrust.
             CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
-            set auxiliaryShipState["mass"] to shipState["mass"].
-            set auxiliaryShipState["altitude"] to shipState["altitude"].
-            set auxiliaryShipState["surfaceCoordinates"] to shipState["surfaceCoordinates"].
-            set auxiliaryShipState["radiusVector"] to shipState["radiusVector"].
-            set auxiliaryShipState["surfaceVelocityVector"] to shipState["surfaceVelocityVector"].
-            set auxiliaryShipState["velocityVector"] to shipState["velocityVector"].
         }
         else
-            CalculateNextStateInInertialFrame(shipState, timeStep).
+            CalculateNextStateInInertialFrame(shipState, stateChangeSources, clampedTimeStep).
 
         set currentAcceleration to thrust / shipState["mass"].
-        set stateChangeSources["thrustVector"] to shipState["surfaceVelocityVector"]:normalized * thrust.
 
         set simulationSteps to simulationSteps + 1.
         set timeLeft to timeLeft + clampedTimeStep.
