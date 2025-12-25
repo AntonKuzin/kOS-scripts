@@ -25,7 +25,7 @@ local stateChangeSources is CreateStateChangeSources().
 set stateChangeSources["thrustVectorDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * thrust. }.
 set stateChangeSources["massFlow"] to maxMassFlow.
 
-set timeStep to 4.
+set timeStep to 8.
 local clampedTimeStep is timeStep.
 local landingSpot is ship:geoposition.
 VecDrawArgs(

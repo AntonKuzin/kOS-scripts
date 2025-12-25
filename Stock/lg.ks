@@ -35,7 +35,7 @@ local targetVector is V(0, 0, 0).
 local overshoot is 0.
 local sideslip is 0.
 
-local timeStep is 4.
+local timeStep is 8.
 local clampedTimeStep is timeStep.
 local simulationSteps is 0.
 local timeLeft is 0.
@@ -91,8 +91,8 @@ until ship:status = "Landed"
         print "Side slip: " + Round(sideslip, 2).
     }
 
-    if simulationSteps < 100
-        set timeStep to max(timeStep / 2, 0.05).
+    if simulationSteps < 50
+        set timeStep to max(timeStep / 2, 0.1).
 
     wait 0.
 }

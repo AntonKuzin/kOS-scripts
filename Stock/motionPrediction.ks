@@ -1,6 +1,8 @@
 @lazyGlobal off.
 
-local intermediateShipState is CreateShipState().
+local intermediateShipState1 is CreateShipState().
+local intermediateShipState2 is CreateShipState().
+local intermediateShipState3 is CreateShipState().
 local localGsmall is 0.
 local gravitationalAccelerationVector is V(0, 0, 0).
 local accelerationVector is V(0, 0, 0).
@@ -23,10 +25,24 @@ global function CalculateNextStateInInertialFrame
 
     set gravitationalAccelerationVector to CalculateGravitationalAcceleration(shipState["radiusVector"]).
     set accelerationVector to -stateChangeSources["thrustVectorDelegate"]:call(shipState).
-    AdvanceOneStepAhead(shipState, intermediateShipState, stateChangeSources, timeStep).
+    AdvanceOneStepAhead(shipState, intermediateShipState1, stateChangeSources, timeStep / 2).
 
-    set gravitationalAccelerationVector to (gravitationalAccelerationVector + CalculateGravitationalAcceleration(intermediateShipState["radiusVector"])) / 2.
-    set accelerationVector to (-stateChangeSources["thrustVectorDelegate"]:call(shipState) + -stateChangeSources["thrustVectorDelegate"]:call(intermediateShipState)) / 2.
+    set gravitationalAccelerationVector to (gravitationalAccelerationVector + CalculateGravitationalAcceleration(intermediateShipState1["radiusVector"])) / 2.
+    set accelerationVector to (-stateChangeSources["thrustVectorDelegate"]:call(shipState) + -stateChangeSources["thrustVectorDelegate"]:call(intermediateShipState1)) / 2.
+    AdvanceOneStepAhead(shipState, intermediateShipState2, stateChangeSources, timeStep / 2).
+
+    set gravitationalAccelerationVector to (CalculateGravitationalAcceleration(shipState["radiusVector"]) + CalculateGravitationalAcceleration(intermediateShipState2["radiusVector"])) / 2.
+    set accelerationVector to (-stateChangeSources["thrustVectorDelegate"]:call(shipState) + -stateChangeSources["thrustVectorDelegate"]:call(intermediateShipState2)) / 2.
+    AdvanceOneStepAhead(shipState, intermediateShipState3, stateChangeSources, timeStep).
+
+    set gravitationalAccelerationVector to (CalculateGravitationalAcceleration(shipState["radiusVector"])
+        + 2 * CalculateGravitationalAcceleration(intermediateShipState1["radiusVector"])
+        + 2 * CalculateGravitationalAcceleration(intermediateShipState2["radiusVector"])
+        + CalculateGravitationalAcceleration(intermediateShipState3["radiusVector"])) / 6.
+    set accelerationVector to (-stateChangeSources["thrustVectorDelegate"]:call(shipState)
+        + 2 * -stateChangeSources["thrustVectorDelegate"]:call(intermediateShipState1)
+        + 2 * -stateChangeSources["thrustVectorDelegate"]:call(intermediateShipState2)
+        + -stateChangeSources["thrustVectorDelegate"]:call(intermediateShipState3)) / 6.
     AdvanceOneStepAhead(shipState, shipState, stateChangeSources, timeStep).
 }
 
