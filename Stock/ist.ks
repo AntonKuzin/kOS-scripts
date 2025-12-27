@@ -22,7 +22,7 @@ local guessAdjustmentStep is timeGuess / 2.
 local currentAcceleration is thrust / ship:mass.
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
-set stateChangeSources["thrustVectorDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * thrust. }.
+set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * thrust. }.
 set stateChangeSources["massFlow"] to maxMassFlow.
 
 set timeStep to 8.

@@ -5,20 +5,24 @@ clearScreen.
 
 set ship:control:pilotMainThrottle to 0.
 lock steering to ship:velocity:surface.
-local stagesData is GetStagesData().
-local shipState is CreateShipState().
 
 local burnStartTime is TimeStamp() + eta:apoapsis.
 local initialVelocityVector is GetVectorAdjustedForRotation(VelocityAt(ship, burnStartTime):orbit, eta:apoapsis).
 local targetOrbitalSpeedVector is initialVelocityVector:normalized * sqrt(body:mu / (PositionAt(ship, burnStartTime) - body:position):mag).
-
 local aimVector is targetOrbitalSpeedVector - initialVelocityVector.
+
+local currentStage is ship:stageNum.
+local stagesData is GetStagesData().
+local shipState is CreateShipState().
+local stateChangeSources is CreateStateChangeSources().
+set stateChangeSources["thrustDelegate"] to { local parameter state. return -aimVector:normalized * stagesData[currentStage]["totalVacuumThrust"]. }.
+
 
 local requiredDeltaV is aimVector:mag.
 local burnTime is GetBurnTime(requiredDeltaV).
 set burnStartTime to burnStartTime - burnTime / 2.
 
-local timeStep is 1.
+local timeStep is 2.
 local integrationSteps is 0.
 until TimeStamp():seconds > burnStartTime
 {
@@ -37,7 +41,7 @@ until TimeStamp():seconds > burnStartTime
     print "DeltaV to burn: " + Round(requiredDeltaV, 2).
     print "Orbital insertion altitude: " + Round(shipState["altitude"], 0).
 
-    wait 1.
+    wait 0.
 }
 
 lock steering to aimVector.
@@ -101,10 +105,8 @@ local function GetBurnTime
 
 local function RunPredictorCorrectorIteration
 {
-    local currentStage is ship:stageNum.
-
-    set shipState["massFlow"] to stagesData[currentStage]["massFlow"].
-    set shipState["thrustVector"] to -aimVector:normalized * stagesData[currentStage]["totalVacuumThrust"].
+    set currentStage to ship:stageNum.
+    set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
     set initialVelocityVector to shipState["velocityVector"].
     
     set integrationSteps to 0.
@@ -114,17 +116,16 @@ local function RunPredictorCorrectorIteration
         {
             set currentStage to currentStage - 1.
             set shipState["mass"] to stagesData[currentStage]["totalMass"].
-            set shipState["massFlow"] to stagesData[currentStage]["massFlow"].
-            set shipState["thrustVector"] to -aimVector:normalized * stagesData[currentStage]["totalVacuumThrust"].
+            set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
         }
 
-        CalculateNextStateInRotatingFrame(shipState, timeStep).
+        CalculateNextStateInRotatingFrame(shipState, stateChangeSources, timeStep).
         
         set integrationSteps to integrationSteps + 1.
     }
     set shipState["velocityVector"]:mag to targetOrbitalSpeedVector:mag.
 
-    if integrationSteps < 100
+    if integrationSteps < 50
     {
         set timeStep to Max(0.05, timeStep / 2).
     }
