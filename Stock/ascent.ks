@@ -48,9 +48,10 @@ if LAN <> -1
     }
 }
 
-local timeStep is 2.
+local timeStep is 4.
 local integrationSteps is 0.
 
+local currentStage is ship:stageNum.
 local stagesData is GetStagesData().
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
@@ -59,14 +60,12 @@ set stateChangeSources["thrustDelegate"] to { local parameter state. return -sta
 
 local predictedOrbit is CREATEORBIT(-body:position, velocity:orbit, body, 0).
 
-local currentStage is ship:stageNum.
 until orbit:apoapsis >= targetAltitude
 {
     set integrationSteps to 0.
 
     if currentStage > ship:stageNum
     {
-        set currentStage to ship:stageNum.
         wait until stage:ready.
         set stagesData to GetStagesData().
     }
@@ -76,7 +75,7 @@ until orbit:apoapsis >= targetAltitude
     set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
 
     set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
-    until ship:velocity:surface:mag < 1 or predictedOrbit:apoapsis >= targetAltitude or shipState["altitude"] < 0
+    until predictedOrbit:apoapsis >= targetAltitude or shipState["altitude"] < 0
     {
         CalculateNextStateInRotatingFrame(shipState, stateChangeSources, timeStep).
         if shipState["mass"] <= stagesData[currentStage]["endMass"] and currentStage > 0
@@ -90,7 +89,7 @@ until orbit:apoapsis >= targetAltitude
         set integrationSteps to integrationSteps + 1.
     }
 
-    if integrationSteps < 50
+    if integrationSteps < 50 and ship:velocity:surface:mag > 1
     {
         set timeStep to Max(0.05, timeStep / 2).
     }

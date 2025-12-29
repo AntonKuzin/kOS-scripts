@@ -6,40 +6,48 @@ clearScreen.
 set ship:control:pilotMainThrottle to 0.
 lock steering to ship:velocity:surface.
 
-local burnStartTime is TimeStamp() + eta:apoapsis.
-local initialVelocityVector is GetVectorAdjustedForRotation(VelocityAt(ship, burnStartTime):orbit, eta:apoapsis).
+local burnStartOffset is eta:apoapsis.
+local burnStartTime is TimeStamp() + burnStartOffset.
+local initialVelocityVector is GetVectorAdjustedForRotation(VelocityAt(ship, burnStartTime):orbit, burnStartOffset).
 local targetOrbitalSpeedVector is initialVelocityVector:normalized * sqrt(body:mu / (PositionAt(ship, burnStartTime) - body:position):mag).
 local aimVector is targetOrbitalSpeedVector - initialVelocityVector.
+local aimCandidateVector is aimVector.
+local aimCorrectionVector is V(0, 0, 0).
 
+local currentAcceleration is 1.
 local currentStage is ship:stageNum.
 local stagesData is GetStagesData().
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
-set stateChangeSources["thrustDelegate"] to { local parameter state. return -aimVector:normalized * stagesData[currentStage]["totalVacuumThrust"]. }.
-
+set stateChangeSources["thrustDelegate"] to { local parameter state. return -aimCandidateVector:normalized * stagesData[currentStage]["totalVacuumThrust"]. }.
 
 local requiredDeltaV is aimVector:mag.
-local burnTime is GetBurnTime(requiredDeltaV).
-set burnStartTime to burnStartTime - burnTime / 2.
+local halfBurnTime is GetBurnTime(requiredDeltaV) / 2.
+set burnStartOffset to eta:apoapsis - halfBurnTime.
 
+local insertionAltitude is orbit:apoapsis.
 local timeStep is 2.
+local clampedTimeStep is timeStep.
 local integrationSteps is 0.
 until TimeStamp():seconds > burnStartTime
 {
     UpdateShipState(shipState).
-    set shipState["radiusVector"] to GetVectorAdjustedForRotation(PositionAt(ship, burnStartTime) - body:position, eta:apoapsis - burnTime / 2).
-    set shipState["velocityVector"] to GetVectorAdjustedForRotation(VelocityAt(ship, burnStartTime):orbit, eta:apoapsis - burnTime / 2).
-    set shipState["surfaceVelocityVector"] to GetVectorAdjustedForRotation(VelocityAt(ship, burnStartTime):surface, eta:apoapsis - burnTime / 2).
+    set shipState["radiusVector"] to GetVectorAdjustedForRotation(PositionAt(ship, burnStartTime) - body:position, burnStartOffset).
+    set shipState["velocityVector"] to GetVectorAdjustedForRotation(VelocityAt(ship, burnStartTime):orbit, burnStartOffset).
+    set shipState["surfaceVelocityVector"] to GetVectorAdjustedForRotation(VelocityAt(ship, burnStartTime):surface, burnStartOffset).
 
+    set initialVelocityVector to shipState["velocityVector"].
     RunPredictorCorrectorIteration().
 
     set requiredDeltaV to aimVector:mag.
-    set burnTime to GetBurnTime(requiredDeltaV).
+    set halfBurnTime to GetBurnTime(requiredDeltaV) / 2.
+    set burnStartOffset to eta:apoapsis - halfBurnTime.
+    set burnStartTime to TimeStamp() + burnStartOffset.
 
     clearScreen.
-    print "Coasting to apoapsis: " + Round(eta:apoapsis - (burnTime / 2), 2).
+    print "Coasting to apoapsis: " + Round(burnStartOffset , 2).
     print "DeltaV to burn: " + Round(requiredDeltaV, 2).
-    print "Orbital insertion altitude: " + Round(shipState["altitude"], 0).
+    print "Orbital insertion altitude: " + Round(insertionAltitude, 0).
 
     wait 0.
 }
@@ -49,7 +57,7 @@ set ship:control:pilotMainThrottle to 1.
 wait until ship:thrust > 0.
 
 local acceleration is ship:thrust / ship:mass.
-until targetOrbitalSpeedVector:mag < velocity:orbit:mag
+until (targetOrbitalSpeedVector - velocity:orbit):mag < 10
 {
     if ship:thrust = 0
     {
@@ -58,6 +66,8 @@ until targetOrbitalSpeedVector:mag < velocity:orbit:mag
     }
 
     UpdateShipState(shipState).
+
+    set initialVelocityVector to shipState["velocityVector"].
     RunPredictorCorrectorIteration().
 
     set acceleration to ship:thrust / ship:mass. 
@@ -69,7 +79,24 @@ until targetOrbitalSpeedVector:mag < velocity:orbit:mag
     clearScreen.
     print "Orbital insertion".
     print "DeltaV to burn: " + Round((targetOrbitalSpeedVector - ship:velocity:orbit):mag, 2).
-    print "Insertion altitude: " + Round(shipState["altitude"], 0).
+    print "Insertion altitude: " + Round(insertionAltitude, 0).
+
+    wait 0.
+}
+
+set targetOrbitalSpeedVector to VectorExclude(body:position, velocity:orbit):normalized * sqrt(body:mu / body:position:mag).
+set aimVector to targetOrbitalSpeedVector - velocity:orbit.
+until aimVector:mag < 0.01
+{
+    clearScreen.
+    print "Terminal phase.".
+    print "DeltaV to burn: " + Round(aimVector:mag, 2).
+    
+    set acceleration to ship:thrust / ship:mass.
+    set ship:control:pilotMainThrottle to min(0.1, aimVector:mag / acceleration / 10).
+
+    set targetOrbitalSpeedVector to VectorExclude(body:position, velocity:orbit):normalized * sqrt(body:mu / body:position:mag).
+    set aimVector to targetOrbitalSpeedVector - velocity:orbit.
 
     wait 0.
 }
@@ -107,9 +134,9 @@ local function RunPredictorCorrectorIteration
 {
     set currentStage to ship:stageNum.
     set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
-    set initialVelocityVector to shipState["velocityVector"].
     
     set integrationSteps to 0.
+    set currentAcceleration to stagesData[currentStage]["totalVacuumThrust"] / shipState["mass"].
     until shipState["velocityVector"]:mag >= targetOrbitalSpeedVector:mag and shipState["mass"] >= stagesData[0]["endMass"]
     {
         until shipState["mass"] > stagesData[currentStage]["endMass"] or currentStage = 0
@@ -119,11 +146,13 @@ local function RunPredictorCorrectorIteration
             set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
         }
 
-        CalculateNextStateInRotatingFrame(shipState, stateChangeSources, timeStep).
-        
+        set clampedTimeStep to Min(timeStep, aimCorrectionVector:mag / currentAcceleration / 2).
+        CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
+        set aimCorrectionVector to targetOrbitalSpeedVector - shipState["velocityVector"].
+        set currentAcceleration to stagesData[currentStage]["totalVacuumThrust"] / shipState["mass"].
+
         set integrationSteps to integrationSteps + 1.
     }
-    set shipState["velocityVector"]:mag to targetOrbitalSpeedVector:mag.
 
     if integrationSteps < 50
     {
@@ -131,7 +160,15 @@ local function RunPredictorCorrectorIteration
     }
     
     set targetOrbitalSpeedVector to VectorExclude(shipState["radiusVector"], shipState["velocityVector"]):normalized * sqrt(body:mu / shipState["radiusVector"]:mag).
-    set aimVector to aimVector + (targetOrbitalSpeedVector - shipState["velocityVector"]).
+    set aimCorrectionVector to targetOrbitalSpeedVector - shipState["velocityVector"].
+
+    set aimCandidateVector to aimCandidateVector + aimCorrectionVector.
+    if aimCorrectionVector:mag < timeStep
+    {
+        set aimVector to aimCandidateVector.
+        set aimCandidateVector to targetOrbitalSpeedVector - initialVelocityVector.
+        set insertionAltitude to shipState["altitude"].
+    }
 }
 
 local function GetVectorAdjustedForRotation
