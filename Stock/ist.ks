@@ -19,7 +19,6 @@ local timeStep is 0.
 local timeGuess is ship:orbit:period / 4.
 local guessAdjustmentStep is timeGuess / 2.
 
-local currentAcceleration is thrust / ship:mass.
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
 set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * thrust. }.
@@ -76,25 +75,19 @@ until false
     set shipState["surfaceVelocityVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeGuess, -body:angularvel) * shipState["surfaceVelocityVector"].
     set shipState["altitude"] to shipState["radiusVector"]:mag - body:radius.
 
-    set currentAcceleration to thrust / shipState["mass"].
-
     set initialShipSpeedVector to shipState["velocityVector"].
     set targetVector to targetCoordinates:position - body:position.
     until shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
     {
-        set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / currentAcceleration).
+        set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / shipState["engineAcceleration"]:mag).
         if ship:altitude < 100000
-        {
             CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
-        }
         else
             CalculateNextStateInInertialFrame(shipState, stateChangeSources, clampedTimeStep).
 
-        set currentAcceleration to thrust / shipState["mass"].
-
         set simulationSteps to simulationSteps + 1.
         set timeLeft to timeLeft + clampedTimeStep.
-        set deltaVLeft to deltaVLeft + currentAcceleration * clampedTimeStep.
+        set deltaVLeft to deltaVLeft + shipState["engineAcceleration"]:mag * clampedTimeStep.
     }
 
     if guessAdjustmentStep < 0.1

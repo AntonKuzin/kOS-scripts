@@ -22,7 +22,7 @@ local stateChangeSources is CreateStateChangeSources().
 set stateChangeSources["thrustDelegate"] to { local parameter state. return -aimCandidateVector:normalized * stagesData[currentStage]["totalVacuumThrust"]. }.
 
 local requiredDeltaV is aimVector:mag.
-local halfBurnTime is GetBurnTime(requiredDeltaV) / 2.
+local halfBurnTime is GetBurnTime(requiredDeltaV / 2).
 set burnStartOffset to eta:apoapsis - halfBurnTime.
 
 local insertionAltitude is orbit:apoapsis.
@@ -39,8 +39,7 @@ until TimeStamp():seconds > burnStartTime
     set initialVelocityVector to shipState["velocityVector"].
     RunPredictorCorrectorIteration().
 
-    set requiredDeltaV to aimVector:mag.
-    set halfBurnTime to GetBurnTime(requiredDeltaV) / 2.
+    set halfBurnTime to GetBurnTime(requiredDeltaV / 2).
     set burnStartOffset to eta:apoapsis - halfBurnTime.
     set burnStartTime to TimeStamp() + burnStartOffset.
 
@@ -78,7 +77,7 @@ until (targetOrbitalSpeedVector - velocity:orbit):mag < 10
 
     clearScreen.
     print "Orbital insertion".
-    print "DeltaV to burn: " + Round((targetOrbitalSpeedVector - ship:velocity:orbit):mag, 2).
+    print "DeltaV to burn: " + Round(requiredDeltaV, 2).
     print "Insertion altitude: " + Round(insertionAltitude, 0).
 
     wait 0.
@@ -136,6 +135,7 @@ local function RunPredictorCorrectorIteration
     set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
     
     set integrationSteps to 0.
+    set requiredDeltaV to 0.
     set currentAcceleration to stagesData[currentStage]["totalVacuumThrust"] / shipState["mass"].
     until shipState["velocityVector"]:mag >= targetOrbitalSpeedVector:mag and shipState["mass"] >= stagesData[0]["endMass"]
     {
@@ -152,6 +152,7 @@ local function RunPredictorCorrectorIteration
         set currentAcceleration to stagesData[currentStage]["totalVacuumThrust"] / shipState["mass"].
 
         set integrationSteps to integrationSteps + 1.
+        set requiredDeltaV to requiredDeltaV + shipState["engineAcceleration"]:mag * clampedTimeStep.
     }
 
     if integrationSteps < 50

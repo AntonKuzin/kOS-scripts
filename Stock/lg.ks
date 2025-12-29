@@ -16,7 +16,6 @@ FOR engine in engines
     }
 }
 
-local currentAcceleration is thrust / ship:mass.
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
 set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * thrust. }.
@@ -47,23 +46,18 @@ until ship:status = "Landed"
     set deltaVLeft to 0.
 
     UpdateShipState(shipState).
-    set currentAcceleration to thrust / shipState["mass"].
 
     until shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
     {
-        set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / currentAcceleration).
+        set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / shipState["engineAcceleration"]:mag).
         if ship:altitude < 100000
-        {
             CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
-        }
         else
             CalculateNextStateInInertialFrame(shipState, stateChangeSources, clampedTimeStep).
 
-        set currentAcceleration to thrust / shipState["mass"].
-
         set simulationSteps to simulationSteps + 1.
         set timeLeft to timeLeft + clampedTimeStep.
-        set deltaVLeft to deltaVLeft + currentAcceleration * clampedTimeStep.
+        set deltaVLeft to deltaVLeft + shipState["engineAcceleration"]:mag * clampedTimeStep.
     }
     set landingSpot to shipState["surfaceCoordinates"].
 

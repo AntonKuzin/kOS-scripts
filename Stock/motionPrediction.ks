@@ -26,17 +26,17 @@ global function CalculateNextStateInInertialFrame
     local parameter shipState is Lexicon(), stateChangeSources is Lexicon(), timeStep is 1.
 
     set gravitationalAccelerationVector to CalculateGravitationalAcceleration(shipState["radiusVector"]).
-    set thrustVector to -stateChangeSources["thrustDelegate"]:call(shipState).
+    set thrustVector to stateChangeSources["thrustDelegate"]:call(shipState).
     set externalForcesVector to stateChangeSources["externalForcesDelegate"]:call(shipState).
     AdvanceOneStepAhead(shipState, intermediateShipState1, stateChangeSources, timeStep / 2).
 
     set gravitationalAccelerationVector to (gravitationalAccelerationVector + CalculateGravitationalAcceleration(intermediateShipState1["radiusVector"])) / 2.
-    set thrustVector to (-stateChangeSources["thrustDelegate"]:call(shipState) + -stateChangeSources["thrustDelegate"]:call(intermediateShipState1)) / 2.
+    set thrustVector to (stateChangeSources["thrustDelegate"]:call(shipState) + stateChangeSources["thrustDelegate"]:call(intermediateShipState1)) / 2.
     set externalForcesVector to (stateChangeSources["externalForcesDelegate"]:call(shipState) + stateChangeSources["externalForcesDelegate"]:call(intermediateShipState1)) / 2.
     AdvanceOneStepAhead(shipState, intermediateShipState2, stateChangeSources, timeStep / 2).
 
     set gravitationalAccelerationVector to (CalculateGravitationalAcceleration(shipState["radiusVector"]) + CalculateGravitationalAcceleration(intermediateShipState2["radiusVector"])) / 2.
-    set thrustVector to (-stateChangeSources["thrustDelegate"]:call(shipState) + -stateChangeSources["thrustDelegate"]:call(intermediateShipState2)) / 2.
+    set thrustVector to (stateChangeSources["thrustDelegate"]:call(shipState) + stateChangeSources["thrustDelegate"]:call(intermediateShipState2)) / 2.
     set externalForcesVector to (stateChangeSources["externalForcesDelegate"]:call(shipState) + stateChangeSources["externalForcesDelegate"]:call(intermediateShipState2)) / 2.
     AdvanceOneStepAhead(shipState, intermediateShipState3, stateChangeSources, timeStep).
 
@@ -44,10 +44,10 @@ global function CalculateNextStateInInertialFrame
         + 2 * CalculateGravitationalAcceleration(intermediateShipState1["radiusVector"])
         + 2 * CalculateGravitationalAcceleration(intermediateShipState2["radiusVector"])
         + CalculateGravitationalAcceleration(intermediateShipState3["radiusVector"])) / 6.
-    set thrustVector to (-stateChangeSources["thrustDelegate"]:call(shipState)
-        + 2 * -stateChangeSources["thrustDelegate"]:call(intermediateShipState1)
-        + 2 * -stateChangeSources["thrustDelegate"]:call(intermediateShipState2)
-        + -stateChangeSources["thrustDelegate"]:call(intermediateShipState3)) / 6.
+    set thrustVector to (stateChangeSources["thrustDelegate"]:call(shipState)
+        + 2 * stateChangeSources["thrustDelegate"]:call(intermediateShipState1)
+        + 2 * stateChangeSources["thrustDelegate"]:call(intermediateShipState2)
+        + stateChangeSources["thrustDelegate"]:call(intermediateShipState3)) / 6.
     set externalForcesVector to (stateChangeSources["externalForcesDelegate"]:call(shipState)
         + 2 * stateChangeSources["externalForcesDelegate"]:call(intermediateShipState1)
         + 2 * stateChangeSources["externalForcesDelegate"]:call(intermediateShipState2)
@@ -63,7 +63,8 @@ global function CalculateNextStateInInertialFrame
         "surfaceCoordinates", ship:geoPosition,
         "velocityVector", ship:velocity:orbit,
         "surfaceVelocityVector", ship:velocity:surface,
-        "mass", ship:mass
+        "mass", ship:mass,
+        "engineAcceleration", SHIP:FACING * V(0, 0, -ship:thrust / ship:mass)
     ).
  }
 
@@ -77,6 +78,7 @@ global function CalculateNextStateInInertialFrame
     set shipState["velocityVector"] to ship:velocity:orbit.
     set shipState["surfaceVelocityVector"] to ship:velocity:surface.
     set shipState["mass"] to ship:mass.
+    set shipState["engineAcceleration"] to SHIP:FACING * V(0, 0, -ship:thrust / ship:mass).
  }
 
  global function CreateStateChangeSources
@@ -94,7 +96,8 @@ global function CalculateNextStateInInertialFrame
 
     set halfMassFlow to stateChangeSources["massFlow"] / 2.
     set destinationShipState["mass"] to sourceShipState["mass"] - halfMassFlow * timeStep.
-    set accelerationVector to (thrustVector + externalForcesVector) / destinationShipState["mass"].
+    set accelerationVector to (-thrustVector + externalForcesVector) / destinationShipState["mass"].
+    set destinationShipState["engineAcceleration"] to -thrustVector / destinationShipState["mass"].
 
     set deltaR to sourceShipState["velocityVector"] * timeStep + (accelerationVector + gravitationalAccelerationVector) * (timeStep ^ 2) / 2.
 
