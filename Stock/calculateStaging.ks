@@ -2,11 +2,13 @@
 
 local stagesData is List().
 local partToStageMap is Lexicon().
+local partsQueue is Queue().
 
 global function GetStagesData
 {
     set stagesData to List().
     set partToStageMap to Lexicon().
+    partsQueue:push(Lexicon("stageIndex", 0, "part", ship:rootPart)).
     FROM {local i is ship:stageNum.} UNTIL i < 0 STEP {set i to i - 1.} DO 
     {
         stagesData:Add(Lexicon(
@@ -57,7 +59,6 @@ local function ProcessFairings
 
 local function DisassembleRocketInDecouplingOrder 
 {
-    local partsQueue is Queue(Lexicon("stageIndex", 0, "part", ship:rootPart)).
     until partsQueue:empty
     {
         local currentNode is partsQueue:Pop().
@@ -71,11 +72,11 @@ local function DisassembleRocketInDecouplingOrder
         partToStageMap:Add(currentPart, currentStageIndex).
         if currentPart:IsType("Decoupler") and currentPart:HasModule("ModuleDynamicNodes")
         {
-            HandleEnginePlate(currentPart, partsQueue, currentStageIndex).
+            HandleEnginePlate(currentPart, currentStageIndex).
         }
         else
         {
-            HandleRegularPart(currentPart, partsQueue, currentStageIndex).
+            HandleRegularPart(currentPart, currentStageIndex).
         }
     }
 }
@@ -195,32 +196,31 @@ local function SimulateFuelFlow
     FROM {local i is ship:stageNum.} UNTIL i < 0 STEP {set i to i - 1.} DO 
     {
         local burnTime is 0. 
-        local burnedMass is 0.
+        local fuelMassBurnedInUpperStage is 0.
         local massFlow is 0.
         local stageToDrainFrom is 0.
 
         for engine in stagesData[i]["engines"]
         {
             set massFlow to massFlow + engine:maxMassFlow * engine:thrustLimit / 100.
-            set burnTime to stagesData[i]["fuelMass"] / massFlow.
+            set burnTime to stagesData[i]["fuelMass"] / massFlow. //prevents division by 0
         }
 
         for engine in stagesData[i]["allEngines"]
         {
-            set stageToDrainFrom to partToStageMap[engine].
             set stagesData[i]["totalVacuumThrust"] to stagesData[i]["totalVacuumThrust"] + engine:PossibleThrustAt(0).
             set stagesData[i]["totalSLThrust"] to stagesData[i]["totalSLThrust"] + engine:PossibleThrustAt(1).
 
             if stagesData[i]["engines"]:Contains(engine) = false
             {
+                set stageToDrainFrom to partToStageMap[engine].
                 set massFlow to massFlow + engine:maxMassFlow * engine:thrustLimit / 100.
-                set burnedMass to burnTime * engine:maxMassFlow * engine:thrustLimit / 100.
-                set stagesData[i]["fuelMass"] to stagesData[i]["fuelMass"] + burnedMass.
-                set stagesData[i]["totalMass"] to stagesData[i]["totalMass"] + burnedMass.
-
+                set fuelMassBurnedInUpperStage to burnTime * engine:maxMassFlow * engine:thrustLimit / 100.
+                set stagesData[i]["fuelMass"] to stagesData[i]["fuelMass"] + fuelMassBurnedInUpperStage.
+                set stagesData[i]["totalMass"] to stagesData[i]["totalMass"] + fuelMassBurnedInUpperStage.
                 
-                set stagesData[stageToDrainFrom]["fuelMass"] to stagesData[stageToDrainFrom]["fuelMass"] - burnedMass.
-                set stagesData[stageToDrainFrom]["totalMass"] to stagesData[stageToDrainFrom]["totalMass"] - burnedMass.
+                set stagesData[stageToDrainFrom]["fuelMass"] to stagesData[stageToDrainFrom]["fuelMass"] - fuelMassBurnedInUpperStage.
+                set stagesData[stageToDrainFrom]["totalMass"] to stagesData[stageToDrainFrom]["totalMass"] - fuelMassBurnedInUpperStage.
             }
             set stagesData[i]["massFlow"] to massFlow.
         }
@@ -232,7 +232,6 @@ local function SimulateFuelFlow
 local function HandleEnginePlate
 {
     parameter part.
-    parameter partsQueue.
     parameter currentStageIndex.
 
     for child in part:children
@@ -256,7 +255,6 @@ local function HandleEnginePlate
 local function HandleRegularPart
 {
     parameter part.
-    parameter partsQueue.
     parameter currentStageIndex.
 
     for child in part:children
