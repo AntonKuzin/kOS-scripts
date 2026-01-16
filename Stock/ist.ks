@@ -1,19 +1,10 @@
 @lazyGlobal off.
+RunOncePath("motionPrediction").
+RunOncePath("enginesData").
 clearscreen.
 clearVecDraws().
-RunOncePath("motionPrediction").
 
-local engines is ship:engines.
-local thrust is 0.
-local maxMassFlow is 0.
-FOR engine in engines
-{
-    if engine:ignition
-    {
-        set thrust to thrust + engine:possibleThrust.
-        set maxMassFlow to maxMassFlow + engine:maxMassFlow * engine:thrustLimit / 100.
-    }
-}
+local enginesData is GetEnginesData(ship:engines).
 
 local timeStep is 0.
 local timeGuess is ship:orbit:period / 4.
@@ -21,8 +12,8 @@ local guessAdjustmentStep is timeGuess / 2.
 
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
-set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * thrust. }.
-set stateChangeSources["massFlow"] to maxMassFlow.
+set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * enginesData["thrust"]. }.
+set stateChangeSources["massFlow"] to enginesData["massFlow"].
 
 set timeStep to 8.
 local clampedTimeStep is timeStep.
