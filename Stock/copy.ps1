@@ -1,11 +1,8 @@
-$targetDirectories = @(
-    "E:\Games\Kerbal Space Program\Ships\Script",
-    "E:\Games\Kerbal Space Program RSS\Ships\Script"
+$stockOnly = @(
+    "enginesData.ks"
 )
 
-foreach ($dir in $targetDirectories)
-{
-    Copy-Item -Path "$PSScriptRoot\*" -Destination $dir -Include "*.ks"  -Recurse
-}
+Copy-Item -Path "$PSScriptRoot\*" -Destination "E:\Games\Kerbal Space Program\Ships\Script" -Include "*.ks" -Recurse
+Copy-Item -Path "$PSScriptRoot\*" -Destination "E:\Games\Kerbal Space Program RSS\Ships\Script" -Include "*.ks" -Exclude $stockOnly -Recurse
 
 Write-Host $(Get-Date -DisplayHint Time)

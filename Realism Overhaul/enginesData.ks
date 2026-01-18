@@ -27,5 +27,11 @@ global function GetResiduals
 {
     local parameter engines is ship:engines.
 
-    return 0.
+    local minResiduals is 1.
+    for engine in engines
+    {
+        set minResiduals to Min(minResiduals, engine:GetModule("ModuleEnginesRF"):GetField("predicted residuals")).
+    }
+
+    return minResiduals.
 }
