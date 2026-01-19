@@ -111,7 +111,7 @@ global function CalculateNextStateInInertialFrame
 
  local function CalculateGravitationalAcceleration
  {
-    local parameter radiusVector is V(1, 0, 0).
+    local parameter radiusVector is -body:position.
 
     set localGsmall to body:mu / radiusVector:mag ^ 2.
     return -radiusVector:normalized * localGsmall.
