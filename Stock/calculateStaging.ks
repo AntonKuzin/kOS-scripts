@@ -35,7 +35,7 @@ global function GetStagesData
     ProcessEngines().
     ProcessFuelCrossfeed().
     ProcessFuelTanks().
-    ProcessPayloadStages().
+    //ProcessPayloadStages().
     SimulateFuelFlow().
     
     FROM {local i is 1.} UNTIL i > ship:stageNum STEP {set i to i + 1.} DO
@@ -90,7 +90,6 @@ local function ProcessEngines
         {
             if currentPart:IsType("Engine") and currentPart:HasModule("ModuleDecouple") = false
             {
-                set currentStage["activationIndex"] to Max(currentStage["activationIndex"], currentPart:stage).
                 if currentPart:stage >= currentStage["stageIndex"]
                 {
                     currentStage["enginesDrainingFromTanksDroppedInCurrentStage"]:Add(currentPart).
@@ -98,8 +97,10 @@ local function ProcessEngines
                 
                 FROM {local i is currentStage["stageIndex"].} UNTIL i > currentPart:stage STEP {set i to i + 1.} DO
                 {
-                    print "   Added to: " + stagesData[i]["stageIndex"].
-                    stagesData[i]["allActiveEngines"]:Add(currentPart).
+                    if currentPart:stage = stagesData[i]["activationIndex"]
+                    {
+                        stagesData[i]["allActiveEngines"]:Add(currentPart).
+                    }
                 }
             }
         }
@@ -267,8 +268,9 @@ local function HandleRegularPart
     for child in part:children
     {
         if child:IsType("LaunchClamp")
-            or (child:HasModule("ModuleDecouple") or child:HasModule("ModuleAnchoredDecoupler"))
-            and not child:HasModule("ModuleDynamicNodes")
+            or child:HasModule("ProceduralFairingDecoupler")
+            or ((child:HasModule("ModuleDecouple") or child:HasModule("ModuleAnchoredDecoupler"))
+            and not child:HasModule("ModuleDynamicNodes"))
         {
             local nextStageIndex is child:stage + 1.
             until stagesData[nextStageIndex]["containsFairing"] = false and nextStageIndex < stagesData:length
@@ -287,6 +289,7 @@ local function HandleRegularPart
         }
         else
         {
+            set stagesData[currentStageIndex]["activationIndex"] to Max(stagesData[currentStageIndex]["activationIndex"], child:stage).
             partsQueue:Push(Lexicon("stageIndex", currentStageIndex, "part", child)).
         }
     }
