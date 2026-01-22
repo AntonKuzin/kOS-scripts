@@ -1,19 +1,20 @@
 @lazyGlobal off.
 RunOncePath("motionPrediction").
-RunOncePath("enginesData").
+RunOncePath("calculateStaging").
 clearscreen.
 clearVecDraws().
-
-local enginesData is GetEnginesData(ship:engines).
 
 local timeStep is 0.
 local timeGuess is ship:orbit:period / 4.
 local guessAdjustmentStep is timeGuess / 2.
 
+local currentStage is ship:stageNum.
+local stagesData is GetStagesData().
+
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
-set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * enginesData["thrust"]. }.
-set stateChangeSources["massFlow"] to enginesData["massFlow"].
+set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * stagesData[currentStage]["totalVacuumThrust"]. }.
+set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
 
 set timeStep to 8.
 local clampedTimeStep is timeStep.
@@ -57,6 +58,10 @@ until false
     set timeLeft to 0.
     set deltaVLeft to 0.
 
+    set currentStage to ship:stageNum.
+    set stagesData to GetStagesData().
+    set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
+
     set shipState["mass"] to ship:mass.
     set shipState["radiusVector"] to PositionAt(ship, ititialTime + timeGuess) - body:position.
     set shipState["velocityVector"] to VelocityAt(ship, ititialTime + timeGuess):orbit.
@@ -70,7 +75,15 @@ until false
     set targetVector to targetCoordinates:position - body:position.
     until shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
     {
+        until shipState["mass"] > stagesData[currentStage]["endMass"] or currentStage = 0
+        {
+            set currentStage to currentStage - 1.
+            set shipState["mass"] to stagesData[currentStage]["totalMass"].
+            set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
+        }
+
         set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / shipState["engineAcceleration"]:mag).
+        set clampedTimeStep to Min(clampedTimeStep, Max((shipState["mass"] - stagesData[currentStage]["endMass"]), 0.001) / stateChangeSources["massFlow"]).
         if ship:altitude < 100000
             CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
         else
@@ -117,7 +130,7 @@ local function GetTargetCoordinates
             return point:geoPosition.
     }
 
-    if hasTarget
+    if hasTarget and not target:IsType("Body")
         return target:geoPosition.    
 
     return LatLng(0, 0).
