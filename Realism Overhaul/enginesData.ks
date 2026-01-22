@@ -30,7 +30,7 @@ global function GetResiduals
     local minResiduals is 1.
     for engine in engines
     {
-        set minResiduals to Min(minResiduals, engine:GetModule("ModuleEnginesRF"):GetField("predicted residuals")).
+        set minResiduals to Min(minResiduals, engine:GetModule("ModuleEnginesRF"):GetHiddenField("calculatedResiduals")).
     }
 
     return minResiduals.
