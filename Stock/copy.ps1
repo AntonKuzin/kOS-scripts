@@ -1,5 +1,6 @@
 $stockOnly = @(
-    "enginesData.ks"
+    "enginesData.ks",
+    "test.ks"
 )
 
 Copy-Item -Path "$PSScriptRoot\*" -Destination "E:\Games\Kerbal Space Program\Ships\Script" -Include "*.ks" -Recurse
