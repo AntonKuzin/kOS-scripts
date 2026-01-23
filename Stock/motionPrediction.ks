@@ -99,7 +99,7 @@ global function CalculateNextStateInInertialFrame
  {
     local parameter sourceShipState is Lexicon(), destinationShipState is Lexicon(), timeStep is 1.
 
-    set accelerationVector to (-thrustVector + externalForcesVector) / destinationShipState["mass"].
+    set accelerationVector to (-thrustVector + externalForcesVector) / sourceShipState["mass"].
 
     set deltaR to sourceShipState["velocityVector"] * timeStep + (accelerationVector + gravitationalAccelerationVector) * (timeStep ^ 2) / 2.
     set destinationShipState["radiusVector"] to sourceShipState["radiusVector"] + deltaR.
