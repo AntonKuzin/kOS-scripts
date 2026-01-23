@@ -25,6 +25,7 @@ global function CalculateNextStateInInertialFrame
 {    
     local parameter shipState is Lexicon(), stateChangeSources is Lexicon(), timeStep is 1.
     set halfMassFlow to stateChangeSources["massFlow"] / 2.
+    set shipState["mass"] to shipState["mass"] - halfMassFlow * timeStep.
 
     set gravitationalAccelerationVector to CalculateGravitationalAcceleration(shipState["radiusVector"]).
     set thrustVector to stateChangeSources["thrustDelegate"]:call(shipState).
@@ -98,7 +99,6 @@ global function CalculateNextStateInInertialFrame
  {
     local parameter sourceShipState is Lexicon(), destinationShipState is Lexicon(), timeStep is 1.
 
-    set destinationShipState["mass"] to sourceShipState["mass"] - halfMassFlow * timeStep.
     set accelerationVector to (-thrustVector + externalForcesVector) / destinationShipState["mass"].
 
     set deltaR to sourceShipState["velocityVector"] * timeStep + (accelerationVector + gravitationalAccelerationVector) * (timeStep ^ 2) / 2.
