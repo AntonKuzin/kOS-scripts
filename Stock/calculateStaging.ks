@@ -90,6 +90,7 @@ local function ProcessEngines
         {
             if currentPart:IsType("Engine") and currentPart:HasModule("ModuleDecouple") = false
             {
+                set currentStage["activationIndex"] to Max(currentStage["activationIndex"], currentPart:stage).
                 if currentPart:stage >= currentStage["stageIndex"]
                 {
                     currentStage["enginesDrainingFromTanksDroppedInCurrentStage"]:Add(currentPart).
@@ -279,7 +280,6 @@ local function HandleRegularPart
             }
 
             partsQueue:Push(Lexicon("stageIndex", nextStageIndex, "part", child)).
-            set stagesData[nextStageIndex]["activationIndex"] to Max(stagesData[nextStageIndex]["activationIndex"], nextStageIndex).
             
             if (child:HasModule("ModuleToggleCrossfeed") and child:GetModule("ModuleToggleCrossfeed"):HasEvent("disable crossfeed"))
             {
@@ -289,7 +289,6 @@ local function HandleRegularPart
         }
         else
         {
-            set stagesData[currentStageIndex]["activationIndex"] to Max(stagesData[currentStageIndex]["activationIndex"], child:stage).
             partsQueue:Push(Lexicon("stageIndex", currentStageIndex, "part", child)).
         }
     }
