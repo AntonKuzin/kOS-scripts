@@ -47,7 +47,7 @@ global function GetRunningAverage
 {
     local parameter engines is ship:engines.
 
-    if currentStage <> ship:stageNum
+    if currentStage <> ship:stageNum or Abs(ship:thrust - accumulatedData["thrust"]) / ship:thrust > 0.1
     {
         set currentStage to ship:stageNum.
         ResetRunningAverage().
