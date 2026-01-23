@@ -35,3 +35,41 @@ global function GetResiduals
 
     return minResiduals.
 }
+
+local accumulatedData is Lexicon(
+        "accumulatedThrust", 0,
+        "accumulatedMassFlow", 0,
+        "thrust", 0,
+        "massFlow", 0).
+local iterations is 0.
+local currentStage is -1.
+global function GetRunningAverage
+{
+    local parameter engines is ship:engines.
+
+    if currentStage <> ship:stageNum
+    {
+        set currentStage to ship:stageNum.
+        ResetRunningAverage().
+    }
+    
+    set iterations to iterations + 1.
+    for engine in engines
+    {
+        set accumulatedData["accumulatedThrust"] to accumulatedData["accumulatedThrust"] + engine:thrust.
+        set accumulatedData["accumulatedMassFlow"] to accumulatedData["accumulatedMassFlow"] + engine:massFlow.
+    }
+    set accumulatedData["thrust"] to accumulatedData["accumulatedThrust"] / iterations.
+    set accumulatedData["massFlow"] to accumulatedData["accumulatedMassFlow"] / iterations.
+
+    return accumulatedData.
+}
+
+local function ResetRunningAverage
+{
+    set accumulatedData["accumulatedThrust"] to 0.
+    set accumulatedData["accumulatedMassFlow"] to 0.
+    set accumulatedData["thrust"] to 0.
+    set accumulatedData["massFlow"] to 0.
+    set iterations to 0.
+}

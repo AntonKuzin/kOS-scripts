@@ -29,3 +29,19 @@ global function GetResiduals
 
     return 0.
 }
+
+local accumulatedData is Lexicon(
+        "thrust", 0,
+        "massFlow", 0).
+global function GetRunningAverage
+{
+    local parameter engines is ship:engines.
+ 
+    for engine in engines
+    {
+        set accumulatedData["thrust"] to accumulatedData["thrust"] + engine:thrust.
+        set accumulatedData["massFlow"] to accumulatedData["massFlow"] + engine:massFlow.
+    }
+
+    return accumulatedData.
+}
