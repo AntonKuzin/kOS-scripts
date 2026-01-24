@@ -25,7 +25,6 @@ global function CalculateNextStateInInertialFrame
 {    
     local parameter shipState is Lexicon(), stateChangeSources is Lexicon(), timeStep is 1.
     set halfMassFlow to stateChangeSources["massFlow"] / 2.
-    set shipState["mass"] to shipState["mass"] - halfMassFlow * timeStep.
 
     set gravitationalAccelerationVector to CalculateGravitationalAcceleration(shipState["radiusVector"]).
     set thrustVector to stateChangeSources["thrustDelegate"]:call(shipState).
@@ -33,8 +32,8 @@ global function CalculateNextStateInInertialFrame
     AdvanceOneStepAhead(shipState, intermediateShipState1, timeStep / 2).
 
     set gravitationalAccelerationVector to (gravitationalAccelerationVector + CalculateGravitationalAcceleration(intermediateShipState1["radiusVector"])) / 2.
-    set thrustVector to (stateChangeSources["thrustDelegate"]:call(shipState) + stateChangeSources["thrustDelegate"]:call(intermediateShipState1)) / 2.
-    set externalForcesVector to (stateChangeSources["externalForcesDelegate"]:call(shipState) + stateChangeSources["externalForcesDelegate"]:call(intermediateShipState1)) / 2.
+    set thrustVector to (thrustVector + stateChangeSources["thrustDelegate"]:call(intermediateShipState1)) / 2.
+    set externalForcesVector to (externalForcesVector + stateChangeSources["externalForcesDelegate"]:call(intermediateShipState1)) / 2.
     AdvanceOneStepAhead(shipState, intermediateShipState2, timeStep / 2).
 
     set gravitationalAccelerationVector to (CalculateGravitationalAcceleration(shipState["radiusVector"]) + CalculateGravitationalAcceleration(intermediateShipState2["radiusVector"])) / 2.
@@ -99,7 +98,8 @@ global function CalculateNextStateInInertialFrame
  {
     local parameter sourceShipState is Lexicon(), destinationShipState is Lexicon(), timeStep is 1.
 
-    set accelerationVector to (-thrustVector + externalForcesVector) / sourceShipState["mass"].
+    set destinationShipState["mass"] to sourceShipState["mass"] - halfMassFlow * timeStep.
+    set accelerationVector to (-thrustVector + externalForcesVector) / destinationShipState["mass"].
 
     set deltaR to sourceShipState["velocityVector"] * timeStep + (accelerationVector + gravitationalAccelerationVector) * (timeStep ^ 2) / 2.
     set destinationShipState["radiusVector"] to sourceShipState["radiusVector"] + deltaR.

@@ -7,6 +7,8 @@ local partsQueue is Queue().
 
 global function GetStagesData
 {
+    wait until stage:ready.
+    
     set stagesData to List().
     set partToStageMap to Lexicon().
     partsQueue:push(Lexicon("stageIndex", 0, "part", ship:rootPart)).
