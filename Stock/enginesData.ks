@@ -36,7 +36,9 @@ local accumulatedData is Lexicon(
 global function GetRunningAverage
 {
     local parameter engines is ship:engines.
- 
+    
+    set accumulatedData["thrust"] to 0.
+    set accumulatedData["massFlow"] to 0.
     for engine in engines
     {
         set accumulatedData["thrust"] to accumulatedData["thrust"] + engine:thrust.
