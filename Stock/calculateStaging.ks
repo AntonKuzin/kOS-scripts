@@ -34,6 +34,7 @@ global function GetStagesData
 
     ProcessFairings().
     DisassembleRocketInDecouplingOrder().
+    SetActivationIndexes().
     ProcessEngines().
     ProcessFuelCrossfeed().
     ProcessFuelTanks().
@@ -84,6 +85,14 @@ local function DisassembleRocketInDecouplingOrder
     }
 }
 
+local function SetActivationIndexes
+{
+    for engine in ship:engines
+    {
+        set stagesData[partToStageMap[engine]]["activationIndex"] to Max(stagesData[partToStageMap[engine]]["activationIndex"], engine:stage).
+    }
+}
+
 local function ProcessEngines
 {
     for currentStage in stagesData
@@ -92,7 +101,6 @@ local function ProcessEngines
         {
             if currentPart:IsType("Engine") and currentPart:HasModule("ModuleDecouple") = false
             {
-                set currentStage["activationIndex"] to Max(currentStage["activationIndex"], currentPart:stage).
                 if currentPart:stage >= currentStage["stageIndex"]
                 {
                     currentStage["enginesDrainingFromTanksDroppedInCurrentStage"]:Add(currentPart).
