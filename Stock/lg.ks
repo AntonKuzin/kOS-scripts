@@ -71,6 +71,7 @@ until ship:status = "Landed"
         set deltaVLeft to deltaVLeft + shipState["engineAcceleration"]:mag * clampedTimeStep.
     }
     set landingSpot to shipState["surfaceCoordinates"].
+    set timeStep to Max(timeLeft / 60, 0.1).
 
     clearScreen.
     print "Predicted velocity: " + Round(shipState["surfaceVelocityVector"]:mag, 2).
@@ -95,9 +96,6 @@ until ship:status = "Landed"
         print "Overshoot: " + Round(overshoot, 2).
         print "Side slip: " + Round(sideslip, 2).
     }
-
-    if simulationSteps < 50
-        set timeStep to max(timeStep / 2, 0.1).
 
     wait 0.
 }

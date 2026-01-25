@@ -93,6 +93,7 @@ until false
         set timeLeft to timeLeft + clampedTimeStep.
         set deltaVLeft to deltaVLeft + shipState["engineAcceleration"]:mag * clampedTimeStep.
     }
+    set timeStep to Max(timeLeft / 60, 0.1).
 
     if guessAdjustmentStep < 0.1
     {
