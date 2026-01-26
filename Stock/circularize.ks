@@ -29,7 +29,7 @@ set burnStartOffset to eta:apoapsis - halfBurnTime.
 local insertionAltitude is orbit:apoapsis.
 local timeStep is 2.
 local clampedTimeStep is timeStep.
-local integrationSteps is 0.
+local timeLeft is 0.
 until TimeStamp():seconds > burnStartTime
 {
     UpdateShipState(shipState).
@@ -135,7 +135,7 @@ local function RunPredictorCorrectorIteration
     set currentStage to ship:stageNum.
     set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
     
-    set integrationSteps to 0.
+    set timeLeft to 0.
     set requiredDeltaVCandidate to 0.
     set currentAcceleration to stagesData[currentStage]["totalVacuumThrust"] / shipState["mass"].
     until shipState["velocityVector"]:mag >= targetOrbitalSpeedVector:mag and shipState["mass"] >= stagesData[0]["endMass"]
@@ -152,14 +152,10 @@ local function RunPredictorCorrectorIteration
         set aimCorrectionVector to targetOrbitalSpeedVector - shipState["velocityVector"].
         set currentAcceleration to stagesData[currentStage]["totalVacuumThrust"] / shipState["mass"].
 
-        set integrationSteps to integrationSteps + 1.
+        set timeLeft to timeLeft + clampedTimeStep.
         set requiredDeltaVCandidate to requiredDeltaVCandidate + shipState["engineAcceleration"]:mag * clampedTimeStep.
     }
-
-    if integrationSteps < 50
-    {
-        set timeStep to Max(0.05, timeStep / 2).
-    }
+    set timeStep to Max(timeLeft / 60, 0.1).
     
     set targetOrbitalSpeedVector to VectorExclude(shipState["radiusVector"], shipState["velocityVector"]):normalized * sqrt(body:mu / shipState["radiusVector"]:mag).
     set aimCorrectionVector to targetOrbitalSpeedVector - shipState["velocityVector"].

@@ -30,12 +30,10 @@ local sideslip is 0.
 
 local timeStep is 8.
 local clampedTimeStep is timeStep.
-local simulationSteps is 0.
 local timeLeft is 0.
 local deltaVLeft is 0.
 until ship:status = "Landed"
 {
-    set simulationSteps to 0.
     set timeLeft to 0.
     set deltaVLeft to 0.
 
@@ -66,7 +64,6 @@ until ship:status = "Landed"
         else
             CalculateNextStateInInertialFrame(shipState, stateChangeSources, clampedTimeStep).
 
-        set simulationSteps to simulationSteps + 1.
         set timeLeft to timeLeft + clampedTimeStep.
         set deltaVLeft to deltaVLeft + shipState["engineAcceleration"]:mag * clampedTimeStep.
     }
