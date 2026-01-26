@@ -49,20 +49,21 @@ if LAN <> -1
 }
 
 local timeStep is 4.
-local integrationSteps is 0.
+local clampedTimeStep is timeStep.
+local simulationTime is 0.
 
 local currentStage is ship:stageNum.
 local stagesData is GetStagesData().
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
 set stateChangeSources["externalForcesDelegate"] to { local parameter state. return GetAeroForcesVector(state["altitude"], state["surfaceVelocityVector"]). }.
-set stateChangeSources["thrustDelegate"] to { local parameter state. return -state["surfaceVelocityVector"]:normalized * GetEnginesThrust(stagesData[currentStage]["allEngines"], shipState["altitude"]). }.
+set stateChangeSources["thrustDelegate"] to { local parameter state. return -state["surfaceVelocityVector"]:normalized * GetEnginesThrust(stagesData[currentStage]["allActiveEngines"], shipState["altitude"]). }.
 
 local predictedOrbit is CREATEORBIT(-body:position, velocity:orbit, body, 0).
 
 until orbit:apoapsis >= targetAltitude
 {
-    set integrationSteps to 0.
+    set simulationTime to 0.
 
     if currentStage > ship:stageNum
     {
@@ -77,22 +78,22 @@ until orbit:apoapsis >= targetAltitude
     set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
     until predictedOrbit:apoapsis >= targetAltitude or shipState["altitude"] < 0
     {
-        CalculateNextStateInRotatingFrame(shipState, stateChangeSources, timeStep).
-        if shipState["mass"] <= stagesData[currentStage]["endMass"] and currentStage > 0
+        until shipState["mass"] > stagesData[currentStage]["endMass"] or currentStage = 0
         {
             set currentStage to currentStage - 1.
             set shipState["mass"] to stagesData[currentStage]["totalMass"].
             set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
         }
 
+        set clampedTimeStep to Min(timeStep, Max((shipState["mass"] - stagesData[currentStage]["endMass"]), 0.001) / stateChangeSources["massFlow"]).
+        CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
+
         set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
-        set integrationSteps to integrationSteps + 1.
+        set simulationTime to simulationTime + clampedTimeStep.
     }
 
-    if integrationSteps < 50 and ship:velocity:surface:mag > 1
-    {
-        set timeStep to Max(0.05, timeStep / 2).
-    }
+    if shipState["altitude"] > 0
+        set timeStep to Max(simulationTime / 60, 0.1).
 
     clearScreen.
     print "Altitude: " + Round(shipState["altitude"], 2).
