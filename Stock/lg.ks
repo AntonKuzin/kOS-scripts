@@ -1,5 +1,6 @@
 @lazyGlobal off.
 RunOncePath("motionPrediction").
+RunOncePath("burnSimulation").
 RunOncePath("calculateStaging").
 RunOncePath("enginesData").
 clearscreen.
@@ -12,7 +13,10 @@ local enginesData is GetRunningAverage(stagesData[currentStage]["allActiveEngine
 
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
-set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * stagesData[currentStage]["totalVacuumThrust"]. }.
+local integrator is CreateBurnIntegrator(shipState, stateChangeSources, stagesData, 8,
+    { return shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1. },
+    { return shipState["surfaceVelocityVector"]:mag / shipState["engineAcceleration"]:mag. }).
+set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * stagesData[integrator["currentStage"]]["totalVacuumThrust"]. }.
 set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
 
 local landingSpot is ship:geoposition.
@@ -28,17 +32,9 @@ local targetVector is V(0, 0, 0).
 local overshoot is 0.
 local sideslip is 0.
 
-local timeStep is 8.
-local clampedTimeStep is timeStep.
-local timeLeft is 0.
-local deltaVLeft is 0.
 until ship:status = "Landed"
 {
-    set timeLeft to 0.
-    set deltaVLeft to 0.
-
     set currentStage to ship:stageNum.
-    set stagesData to GetStagesData().
     if ship:thrust > 0 and ship:control:pilotMainThrottle = 1
     {
         set enginesData to GetRunningAverage(stagesData[currentStage]["allActiveEngines"]).
@@ -48,34 +44,15 @@ until ship:status = "Landed"
     UpdateShipState(shipState).
     set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
 
-    until shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1
-    {
-        until shipState["mass"] > stagesData[currentStage]["endMass"] or currentStage = 0
-        {
-            set currentStage to currentStage - 1.
-            set shipState["mass"] to stagesData[currentStage]["totalMass"].
-            set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
-        }
-
-        set clampedTimeStep to Min(timeStep, shipState["surfaceVelocityVector"]:mag / shipState["engineAcceleration"]:mag).
-        set clampedTimeStep to Min(clampedTimeStep, Max((shipState["mass"] - stagesData[currentStage]["endMass"]), 0.001) / stateChangeSources["massFlow"]).
-        if ship:altitude < 100000
-            CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
-        else
-            CalculateNextStateInInertialFrame(shipState, stateChangeSources, clampedTimeStep).
-
-        set timeLeft to timeLeft + clampedTimeStep.
-        set deltaVLeft to deltaVLeft + shipState["engineAcceleration"]:mag * clampedTimeStep.
-    }
+    integrator["run"]().
     set landingSpot to shipState["surfaceCoordinates"].
-    set timeStep to Max(timeLeft / 60, 0.1).
 
     clearScreen.
     print "Predicted velocity: " + Round(shipState["surfaceVelocityVector"]:mag, 2).
     print "Predicted altitude: " + Round(shipState["altitude"], 2).
     print "Predicted radar altitude: " + Round(shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight, 2).
-    print "Simulation time: " + Round(timeLeft, 2).
-    print "Required delta-V: " + Round(deltaVLeft, 2).
+    print "Simulation time: " + Round(integrator["timeRequired"], 2).
+    print "Required delta-V: " + Round(integrator["deltaVRequired"], 2).
 
     if targetCoordinates:lat <> 0 or targetCoordinates:lng <> 0
     {
