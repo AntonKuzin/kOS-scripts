@@ -9,10 +9,11 @@ global function CreateBurnIntegrator
         "run", SimulateBurn@,
         "currentStage", ship:stageNum,
         "timeRequired", 0,
-        "deltaVRequired", 0
+        "deltaVRequired", 0,
+        "timeStep", timeStep
     ).
 
-    local clampedTimeStep is timeStep.
+    local clampedTimeStep is integrator["timeStep"].
     local function SimulateBurn
     {
         set integrator["timeRequired"] to 0.
@@ -28,7 +29,7 @@ global function CreateBurnIntegrator
                 set stateChangeSources["massFlow"] to stagesData[integrator["currentStage"]]["massFlow"].
             }
 
-            set clampedTimeStep to Min(timeStep, timeStepLimiter()).
+            set clampedTimeStep to Min(integrator["timeStep"], timeStepLimiter()).
             set clampedTimeStep to Min(clampedTimeStep, Max((shipState["mass"] - stagesData[integrator["currentStage"]]["endMass"]), 0.001) / stateChangeSources["massFlow"]).
             if ship:altitude < 100000
                 CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
@@ -38,7 +39,7 @@ global function CreateBurnIntegrator
             set integrator["timeRequired"] to integrator["timeRequired"] + clampedTimeStep.
             set integrator["deltaVRequired"] to integrator["deltaVRequired"] + shipState["engineAcceleration"]:mag * clampedTimeStep.
         }
-        set timeStep to Max(integrator["timeRequired"] / 60, 0.1).
+        set integrator["timeStep"] to Max(integrator["timeRequired"] / 60, 0.1).
     }
 
     return integrator.
