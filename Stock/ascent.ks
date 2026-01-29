@@ -57,7 +57,7 @@ local stateChangeSources is CreateStateChangeSources().
 local integrator is CreateBurnIntegrator(shipState, stateChangeSources, stagesData, 8,
     { 
         set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
-        return predictedOrbit:apoapsis >= targetAltitude or shipState["altitude"] < 0 or ship:velocity:surface:mag < 50.
+        return predictedOrbit:apoapsis >= targetAltitude or shipState["altitude"] < 0.
     }).
 set stateChangeSources["externalForcesDelegate"] to { local parameter state. return GetAeroForcesVector(state["altitude"], state["surfaceVelocityVector"]). }.
 set stateChangeSources["thrustDelegate"] to { local parameter state. return -state["surfaceVelocityVector"]:normalized * GetEnginesThrust(stagesData[integrator["currentStage"]]["allActiveEngines"], shipState["altitude"]). }.
@@ -69,7 +69,8 @@ until orbit:apoapsis >= targetAltitude
     UpdateShipState(shipState).
     set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
 
-    integrator["run"]().
+    if ship:velocity:surface:mag > 1
+        integrator["run"]().
 
     clearScreen.
     print "Altitude: " + Round(shipState["altitude"], 2).

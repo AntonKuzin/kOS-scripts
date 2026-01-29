@@ -3,7 +3,7 @@ RunOncePath("motionPrediction").
 
 global function CreateBurnIntegrator
 {
-    local parameter shipState, stateChangeSources, stagesData, timeStep, burnEndCriterion, timeStepLimiter is { return timeStep.}.
+    local parameter shipState, stateChangeSources, stagesData, timeStep, burnEndCriterion, timeStepLimiter is { return timeStep. }.
 
     local integrator is Lexicon(
         "run", SimulateBurn@,
