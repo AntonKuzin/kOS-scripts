@@ -1,7 +1,7 @@
 @lazyGlobal off.
 RunOncePath("calculateStaging").
 RunOncePath("motionPrediction").
-RunOncePath("drag").
+RunOncePath("burnSimulation").
 clearVecDraws().
 
 local parameter LAN is -1.
@@ -48,52 +48,28 @@ if LAN <> -1
     }
 }
 
-local timeStep is 4.
-local clampedTimeStep is timeStep.
-local simulationTime is 0.
+local predictedOrbit is CREATEORBIT(-body:position, velocity:orbit, body, 0).
 
 local currentStage is ship:stageNum.
 local stagesData is GetStagesData().
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
+local integrator is CreateBurnIntegrator(shipState, stateChangeSources, stagesData, 8,
+    { 
+        set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
+        return predictedOrbit:apoapsis >= targetAltitude or shipState["altitude"] < 0 or ship:velocity:surface:mag < 50.
+    }).
 set stateChangeSources["externalForcesDelegate"] to { local parameter state. return GetAeroForcesVector(state["altitude"], state["surfaceVelocityVector"]). }.
-set stateChangeSources["thrustDelegate"] to { local parameter state. return -state["surfaceVelocityVector"]:normalized * GetEnginesThrust(stagesData[currentStage]["allActiveEngines"], shipState["altitude"]). }.
-
-local predictedOrbit is CREATEORBIT(-body:position, velocity:orbit, body, 0).
+set stateChangeSources["thrustDelegate"] to { local parameter state. return -state["surfaceVelocityVector"]:normalized * GetEnginesThrust(stagesData[integrator["currentStage"]]["allActiveEngines"], shipState["altitude"]). }.
 
 until orbit:apoapsis >= targetAltitude
 {
-    set simulationTime to 0.
-
-    if currentStage > ship:stageNum
-    {
-        wait until stage:ready.
-        set stagesData to GetStagesData().
-    }
     set currentStage to ship:stageNum.
 
     UpdateShipState(shipState).
     set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
 
-    set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
-    until predictedOrbit:apoapsis >= targetAltitude or shipState["altitude"] < 0
-    {
-        until shipState["mass"] > stagesData[currentStage]["endMass"] or currentStage = 0
-        {
-            set currentStage to currentStage - 1.
-            set shipState["mass"] to stagesData[currentStage]["totalMass"].
-            set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
-        }
-
-        set clampedTimeStep to Min(timeStep, Max((shipState["mass"] - stagesData[currentStage]["endMass"]), 0.001) / stateChangeSources["massFlow"]).
-        CalculateNextStateInRotatingFrame(shipState, stateChangeSources, clampedTimeStep).
-
-        set predictedOrbit to CREATEORBIT(shipState["radiusVector"], shipState["velocityVector"], body, 0).
-        set simulationTime to simulationTime + clampedTimeStep.
-    }
-
-    if shipState["altitude"] > 0
-        set timeStep to Max(simulationTime / 60, 0.1).
+    integrator["run"]().
 
     clearScreen.
     print "Altitude: " + Round(shipState["altitude"], 2).
