@@ -3,23 +3,10 @@
 local intermediateShipState1 is CreateShipState().
 local intermediateShipState2 is CreateShipState().
 local intermediateShipState3 is CreateShipState().
-local localGsmall is 0.
 local gravitationalAccelerationVector is V(0, 0, 0).
 local thrustVector is V(0, 0, 0).
 local externalForcesVector is V(0, 0, 0).
-local accelerationVector is V(0, 0, 0).
-local deltaR is V(0, 0, 0).
 local halfMassFlow is 0.
-
-global function CalculateNextStateInRotatingFrame
-{
-    local parameter shipState is Lexicon(), stateChangeSources is Lexicon(), timeStep is 1.
-
-    CalculateNextStateInInertialFrame(shipState, stateChangeSources, timeStep).
-    set shipState["radiusVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeStep, -body:angularvel) * shipState["radiusVector"].
-    set shipState["velocityVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeStep, -body:angularvel) * shipState["velocityVector"].
-    set shipState["surfaceVelocityVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeStep, -body:angularvel) * shipState["surfaceVelocityVector"].
-}
 
 global function CalculateNextStateInInertialFrame
 {    
@@ -59,8 +46,18 @@ global function CalculateNextStateInInertialFrame
     set shipState["mass"] to shipState["mass"] - halfMassFlow * timeStep.
 }
 
- global function CreateShipState
- {
+global function CalculateNextStateInRotatingFrame
+{
+    local parameter shipState is Lexicon(), stateChangeSources is Lexicon(), timeStep is 1.
+
+    CalculateNextStateInInertialFrame(shipState, stateChangeSources, timeStep).
+    set shipState["radiusVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeStep, -body:angularvel) * shipState["radiusVector"].
+    set shipState["velocityVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeStep, -body:angularvel) * shipState["velocityVector"].
+    set shipState["surfaceVelocityVector"] to AngleAxis(body:angularvel:mag * constant:radtodeg * timeStep, -body:angularvel) * shipState["surfaceVelocityVector"].
+}
+
+global function CreateShipState
+{
     return Lexicon(
         "radiusVector", ship:position - body:position,
         "altitude", ship:altitude,
@@ -68,12 +65,12 @@ global function CalculateNextStateInInertialFrame
         "velocityVector", ship:velocity:orbit,
         "surfaceVelocityVector", ship:velocity:surface,
         "mass", ship:mass,
-        "engineAcceleration", SHIP:FACING * V(0, 0, -1 / ship:mass)
+        "engineAccelerationVector", SHIP:FACING * V(0, 0, -1 / ship:mass)
     ).
- }
+}
 
- global function UpdateShipState
- {
+global function UpdateShipState
+{
     local parameter shipState is Lexicon().
 
     set shipState["radiusVector"] to ship:position - body:position.
@@ -82,20 +79,22 @@ global function CalculateNextStateInInertialFrame
     set shipState["velocityVector"] to ship:velocity:orbit.
     set shipState["surfaceVelocityVector"] to ship:velocity:surface.
     set shipState["mass"] to ship:mass.
-    set shipState["engineAcceleration"] to SHIP:FACING * V(0, 0, -1 / ship:mass).
- }
+    set shipState["engineAccelerationVector"] to SHIP:FACING * V(0, 0, -1 / ship:mass).
+}
 
- global function CreateStateChangeSources
- {
+global function CreateStateChangeSources
+{
     return Lexicon(
         "thrustDelegate", { local parameter state. return V(0, 0, 0). },
         "externalForcesDelegate", { local parameter state. return V(0, 0, 0). },
         "massFlow", 0
     ).
- }
+}
 
- local function AdvanceOneStepAhead
- {
+local accelerationVector is V(0, 0, 0).
+local deltaR is V(0, 0, 0).
+local function AdvanceOneStepAhead
+{
     local parameter sourceShipState is Lexicon(), destinationShipState is Lexicon(), timeStep is 1.
 
     set destinationShipState["mass"] to sourceShipState["mass"] - halfMassFlow * timeStep.
@@ -107,12 +106,13 @@ global function CalculateNextStateInInertialFrame
     set destinationShipState["surfaceCoordinates"] to body:GeopositionOf(destinationShipState["radiusVector"] + body:position).
     set destinationShipState["velocityVector"] to sourceShipState["velocityVector"] + (accelerationVector + gravitationalAccelerationVector) * timeStep.
     set destinationShipState["surfaceVelocityVector"] to destinationShipState["velocityVector"] - destinationShipState["surfaceCoordinates"]:AltitudeVelocity(destinationShipState["altitude"]):orbit.
- }
+}
 
- local function CalculateGravitationalAcceleration
- {
+local localGsmall is 0.
+local function CalculateGravitationalAcceleration
+{
     local parameter radiusVector is -body:position.
 
     set localGsmall to body:mu / radiusVector:mag ^ 2.
     return -radiusVector:normalized * localGsmall.
- }
+}
