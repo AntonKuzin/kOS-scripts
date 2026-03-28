@@ -75,6 +75,7 @@ until orbit:apoapsis >= targetAltitude
     clearScreen.
     print "Altitude: " + Round(shipState["altitude"], 2).
     print "Velocity: " + Round(shipState["surfaceVelocityVector"]:mag, 2).
+    print "Final pitch: " + Round(VectorAngle(-shipState["radiusVector"], shipState["surfaceVelocityVector"]) - 90, 1).
     wait 0.
 }
 
