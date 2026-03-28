@@ -34,7 +34,7 @@ global function GetStagesData
 
     ProcessFairings().
     DisassembleRocketInDecouplingOrder().
-    SetActivationIndexes().
+    SetActivationIndex().
     ProcessEngines().
     ProcessFuelCrossfeed().
     ProcessFuelTanks().
@@ -85,7 +85,7 @@ local function DisassembleRocketInDecouplingOrder
     }
 }
 
-local function SetActivationIndexes
+local function SetActivationIndex
 {
     for engine in ship:engines
     {
