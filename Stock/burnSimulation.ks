@@ -37,7 +37,7 @@ global function CreateBurnIntegrator
                 CalculateNextStateInInertialFrame(shipState, stateChangeSources, clampedTimeStep).
 
             set integrator["timeRequired"] to integrator["timeRequired"] + clampedTimeStep.
-            set integrator["deltaVRequired"] to integrator["deltaVRequired"] + shipState["engineAcceleration"]:mag * clampedTimeStep.
+            set integrator["deltaVRequired"] to integrator["deltaVRequired"] + shipState["engineAccelerationVector"]:mag * clampedTimeStep.
         }
         set integrator["timeStep"] to Max(integrator["timeRequired"] / 60, 0.1).
     }

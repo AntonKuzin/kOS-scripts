@@ -55,7 +55,7 @@ global function CalculateNextStateInInertialFrame
         + stateChangeSources["externalForcesDelegate"]:call(intermediateShipState3)) / 6.
     AdvanceOneStepAhead(shipState, shipState, timeStep).
     
-    set shipState["engineAcceleration"] to -thrustVector / shipState["mass"].
+    set shipState["engineAccelerationVector"] to -thrustVector / shipState["mass"].
     set shipState["mass"] to shipState["mass"] - halfMassFlow * timeStep.
 }
 

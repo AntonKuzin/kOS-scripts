@@ -15,7 +15,7 @@ local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
 local integrator is CreateBurnIntegrator(shipState, stateChangeSources, stagesData, 8,
     { return shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1. },
-    { return shipState["surfaceVelocityVector"]:mag / shipState["engineAcceleration"]:mag. }).
+    { return shipState["surfaceVelocityVector"]:mag / shipState["engineAccelerationVector"]:mag. }).
 set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * stagesData[integrator["currentStage"]]["totalVacuumThrust"]. }.
 set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
 
