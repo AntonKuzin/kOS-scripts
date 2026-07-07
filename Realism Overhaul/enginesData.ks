@@ -5,19 +5,18 @@ global function GetEnginesData
     local parameter engines is ship:engines.
 
     local data is Lexicon(
-        "thrust", 0,
-        "massFlow", 0,
-        "isp", 0
+        "slThrust", 0,
+        "vacuumThrust", 0,
+        "massFlow", 0
     ).
 
     FOR engine in engines
     {
-        if engine:ignition
-        {
-            set data["thrust"] to data["thrust"] + engine:possibleThrust.
-            set data["massFlow"] to data["massFlow"] + engine:maxMassFlow * engine:thrustLimit / 100.
-            set data["isp"] to data["thrust"] / data["massFlow"] / constant:g0.
-        }
+        set data["slThrust"] to data["slThrust"] + engine:possibleThrustAt(1).
+        set data["vacuumThrust"] to data["vacuumThrust"] + engine:possibleThrustAt(0).
+
+        local minThrottle is engine:GetModule("ModuleEnginesRF"):GetHiddenField("min throttle").
+        set data["massFlow"] to data["massFlow"] + engine:maxMassFlow * (minThrottle + engine:thrustLimit / 100 * (1 - minThrottle)).
     }
 
     return data.

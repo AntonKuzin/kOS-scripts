@@ -216,32 +216,33 @@ local function SimulateFuelFlow
     {
         local burnTime is 0. 
         local fuelMassBurnedInUpperStage is 0.
-        local massFlow is 0.
+        local totalMassFlow is 0.
         local upperStageBurningFuelSimultaneously is 0.
 
-        for engine in stagesData[i]["enginesDrainingFromTanksDroppedInCurrentStage"]
+        local enginesData is GetEnginesData(stagesData[i]["enginesDrainingFromTanksDroppedInCurrentStage"]).
+        if enginesData["massFlow"] > 0
         {
-            set massFlow to massFlow + engine:maxMassFlow * engine:thrustLimit / 100.
-            set burnTime to stagesData[i]["fuelMass"] / massFlow. //prevents division by 0 if there's no engines
+            set burnTime to stagesData[i]["fuelMass"] / enginesData["massFlow"].
         }
 
         for engine in stagesData[i]["allActiveEngines"]
         {
-            set stagesData[i]["totalVacuumThrust"] to stagesData[i]["totalVacuumThrust"] + engine:PossibleThrustAt(0).
-            set stagesData[i]["totalSLThrust"] to stagesData[i]["totalSLThrust"] + engine:PossibleThrustAt(1).
+            set enginesData to GetEnginesData(List(engine)).
+            set stagesData[i]["totalVacuumThrust"] to stagesData[i]["totalVacuumThrust"] + enginesData["vacuumThrust"].
+            set stagesData[i]["totalSLThrust"] to stagesData[i]["totalSLThrust"] + enginesData["slThrust"].
 
             if stagesData[i]["enginesDrainingFromTanksDroppedInCurrentStage"]:Contains(engine) = false
             {
                 set upperStageBurningFuelSimultaneously to partToStageMap[engine].
-                set massFlow to massFlow + engine:maxMassFlow * engine:thrustLimit / 100.
-                set fuelMassBurnedInUpperStage to burnTime * engine:maxMassFlow * engine:thrustLimit / 100.
+                set totalMassFlow to totalMassFlow + enginesData["massFlow"].
+                set fuelMassBurnedInUpperStage to burnTime * enginesData["massFlow"].
                 set stagesData[i]["fuelMass"] to stagesData[i]["fuelMass"] + fuelMassBurnedInUpperStage.
                 set stagesData[i]["totalMass"] to stagesData[i]["totalMass"] + fuelMassBurnedInUpperStage.
                 
                 set stagesData[upperStageBurningFuelSimultaneously]["fuelMass"] to stagesData[upperStageBurningFuelSimultaneously]["fuelMass"] - fuelMassBurnedInUpperStage.
                 set stagesData[upperStageBurningFuelSimultaneously]["totalMass"] to stagesData[upperStageBurningFuelSimultaneously]["totalMass"] - fuelMassBurnedInUpperStage.
             }
-            set stagesData[i]["massFlow"] to massFlow.
+            set stagesData[i]["massFlow"] to totalMassFlow.
         }
         
         set stagesData[i]["endMass"] to stagesData[i]["totalMass"] - stagesData[i]["fuelMass"].
