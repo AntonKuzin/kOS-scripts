@@ -78,14 +78,14 @@ clearVecDraws().
 
 local function GetTargetCoordinates
 {
-    if hasTarget and not target:IsType("Body")
-        return target:geoPosition.
-    
     for point in AllWaypoints()
     {
         if point:isSelected
-            return point.
+            return point:geoPosition.
     }
+
+    if hasTarget and not target:IsType("Body")
+        return target:geoPosition.    
 
     return LatLng(0, 0).
 }
