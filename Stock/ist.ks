@@ -5,7 +5,7 @@ RunOncePath("burnSimulation").
 clearscreen.
 clearVecDraws().
 
-local timeGuess is ship:orbit:period / 4.
+local parameter timeGuess is ship:orbit:period / 4.
 local guessAdjustmentStep is timeGuess / 2.
 
 local currentStage is ship:stageNum.
