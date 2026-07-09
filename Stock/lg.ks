@@ -9,7 +9,7 @@ wait 0.
 
 local currentStage is ship:stageNum.
 local stagesData is GetStagesData().
-local enginesData is GetRunningAverage(stagesData[currentStage]["allActiveEngines"]).
+local runningAverageEngineStats is GetRunningAverage(stagesData[currentStage]["allActiveEngines"]).
 
 local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
@@ -37,14 +37,14 @@ until ship:status = "Landed"
     set currentStage to ship:stageNum.
     if ship:thrust > 0 and ship:control:pilotMainThrottle = 1
     {
-        set enginesData to GetRunningAverage(stagesData[currentStage]["allActiveEngines"]).
-        set stagesData[currentStage]["totalVacuumThrust"] to enginesData["thrust"].
-        set stagesData[currentStage]["massFlow"] to enginesData["massFlow"].
+        set runningAverageEngineStats to GetRunningAverage(stagesData[currentStage]["allActiveEngines"]).
+        set stagesData[currentStage]["totalVacuumThrust"] to runningAverageEngineStats["thrust"].
+        set stagesData[currentStage]["massFlow"] to runningAverageEngineStats["massFlow"].
     }
     UpdateShipState(shipState).
     set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
 
-    integrator["run"]().
+    integrator:run().
     set landingSpot to shipState["surfaceCoordinates"].
 
     clearScreen.
@@ -54,7 +54,7 @@ until ship:status = "Landed"
     print "Simulation time: " + Round(integrator["timeRequired"], 2).
     print "Required delta-V: " + Round(integrator["deltaVRequired"], 2).
 
-    if targetCoordinates:lat <> 0 or targetCoordinates:lng <> 0
+    if targetCoordinates:lat <> 0 and targetCoordinates:lng <> 0
     {
         set targetVector to targetCoordinates:position - body:position.
         set errorVector to targetVector - shipState["radiusVector"].
