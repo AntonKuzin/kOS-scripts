@@ -47,6 +47,7 @@ global function GetStagesData
         set stagesData[i]["endMass"] to stagesData[i]["endMass"] + stagesData[i - 1]["totalMass"].
     }
     
+    PrintData().
     return stagesData.
 }
 
@@ -222,7 +223,8 @@ local function SimulateFuelFlow
         local enginesData is GetEnginesData(stagesData[i]["enginesDrainingFromTanksDroppedInCurrentStage"]).
         if enginesData["massFlow"] > 0
         {
-            set burnTime to stagesData[i]["fuelMass"] / enginesData["massFlow"].
+            set totalMassFlow to enginesData["massFlow"].
+            set burnTime to stagesData[i]["fuelMass"] / totalMassFlow.
         }
 
         for engine in stagesData[i]["allActiveEngines"]
@@ -314,5 +316,6 @@ local function PrintData
         print "   Dry mass: " + Round(stagesData[i]["endMass"], 3).
         print "   SL thrust: " + Round(stagesData[i]["totalSLThrust"], 3).
         print "   Vacuum thrust: " + Round(stagesData[i]["totalVacuumThrust"], 3).
+        print "   Mass flow: " + Round(stagesData[i]["massFlow"], 3).
     }
 }
