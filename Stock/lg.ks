@@ -46,11 +46,13 @@ until ship:status = "Landed"
 
     integrator:run().
     set landingSpot to shipState["surfaceCoordinates"].
+    set normalVector to shipState["radiusVector"] - body:position.
 
     clearScreen.
     print "Predicted velocity: " + Round(shipState["surfaceVelocityVector"]:mag, 2).
     print "Predicted altitude: " + Round(shipState["altitude"], 2).
     print "Predicted radar altitude: " + Round(shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight, 2).
+    print "Final pitch angle: " + Round(90 - VectorAngle(shipState["radiusVector"], -shipState["surfaceVelocityVector"]), 0).
     print "Simulation time: " + Round(integrator["timeRequired"], 2).
     print "Required delta-V: " + Round(integrator["deltaVRequired"], 2).
 
