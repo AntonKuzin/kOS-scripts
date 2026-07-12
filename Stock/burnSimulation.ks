@@ -3,7 +3,7 @@ RunOncePath("motionPrediction").
 
 global function CreateBurnIntegrator
 {
-    local parameter shipState, stateChangeSources, stagesData, timeStep, burnEndCriterion, timeStepLimiter is { return timeStep. }.
+    local parameter shipState, stateChangeSources, stagesData, timeStep, burnEndCriterion, timeStepLimiter is { return timeStep. }, integrationSteps is 30.
 
     local integrator is Lexicon(
         "run", SimulateBurn@,
@@ -39,7 +39,7 @@ global function CreateBurnIntegrator
             set integrator["timeRequired"] to integrator["timeRequired"] + clampedTimeStep.
             set integrator["deltaVRequired"] to integrator["deltaVRequired"] + shipState["engineAccelerationVector"]:mag * clampedTimeStep.
         }
-        set integrator["timeStep"] to Max(integrator["timeRequired"] / 60, 0.1).
+        set integrator["timeStep"] to Max(integrator["timeRequired"] / integrationSteps, 0.1).
     }
 
     return integrator.
