@@ -16,8 +16,8 @@ local stateChangeSources is CreateStateChangeSources().
 local integrator is CreateBurnIntegrator(shipState, stateChangeSources, stagesData, 8,
     { return shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1. },
     { return shipState["surfaceVelocityVector"]:mag / shipState["engineAccelerationVector"]:mag. }).
-set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * stagesData[integrator["currentStage"]]["totalVacuumThrust"]. }.
-set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
+set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * stagesData[integrator["currentStage"]]["maxVacuumThrust"]. }.
+set stateChangeSources["massFlow"] to stagesData[currentStage]["maxMassFlow"].
 
 local landingSpot is ship:geoposition.
 VecDrawArgs(
@@ -38,11 +38,12 @@ until ship:status = "Landed"
     if ship:thrust > 0 and ship:control:pilotMainThrottle = 1
     {
         set runningAverageEngineStats to GetRunningAverage(stagesData[currentStage]["allActiveEngines"]).
-        set stagesData[currentStage]["totalVacuumThrust"] to runningAverageEngineStats["thrust"].
-        set stagesData[currentStage]["massFlow"] to runningAverageEngineStats["massFlow"].
+        set stagesData[currentStage]["maxVacuumThrust"] to runningAverageEngineStats["thrust"].
+        set stagesData[currentStage]["maxMassFlow"] to runningAverageEngineStats["massFlow"].
+        print stagesData[currentStage]["maxVacuumThrust"].
     }
     UpdateShipState(shipState).
-    set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
+    set stateChangeSources["massFlow"] to stagesData[currentStage]["maxMassFlow"].
 
     integrator:run().
     set landingSpot to shipState["surfaceCoordinates"].

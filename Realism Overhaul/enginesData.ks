@@ -5,18 +5,24 @@ global function GetEnginesData
     local parameter engines is ship:engines.
 
     local data is Lexicon(
-        "slThrust", 0,
-        "vacuumThrust", 0,
-        "massFlow", 0
+        "maxSlThrust", 0,
+        "maxVacuumThrust", 0,
+        "maxMassFlow", 0,
+        "minSlThrust", 0,
+        "minVacuumThrust", 0,
+        "minMassFlow", 0
     ).
 
     FOR engine in engines
     {
-        set data["slThrust"] to data["slThrust"] + engine:possibleThrustAt(1).
-        set data["vacuumThrust"] to data["vacuumThrust"] + engine:possibleThrustAt(0).
+        set data["maxSlThrust"] to data["maxSlThrust"] + engine:possibleThrustAt(1).
+        set data["maxVacuumThrust"] to data["maxVacuumThrust"] + engine:possibleThrustAt(0).
 
         local minThrottle is engine:GetModule("ModuleEnginesRF"):GetHiddenField("min throttle").
-        set data["massFlow"] to data["massFlow"] + engine:maxMassFlow * (minThrottle + engine:thrustLimit / 100 * (1 - minThrottle)).
+        set data["maxMassFlow"] to data["maxMassFlow"] + engine:maxMassFlow * (minThrottle + engine:thrustLimit / 100 * (1 - minThrottle)).
+        set data["minSlThrust"] to data["minSlThrust"] + engine:possibleThrustAt(1) * minThrottle.
+        set data["minVacuumThrust"] to data["minVacuumThrust"] + engine:possibleThrustAt(0) * minThrottle.
+        set data["minMassFlow"] to data["minMassFlow"] + engine:maxMassFlow * minThrottle.
     }
 
     return data.
@@ -46,7 +52,7 @@ global function GetRunningAverage
 {
     local parameter engines is ship:engines.
 
-    if currentStage <> ship:stageNum or Abs(ship:thrust - accumulatedData["thrust"]) / ship:thrust > 0.1
+    if currentStage <> ship:stageNum or Abs(ship:thrust - accumulatedData["thrust"]) / ship:thrust > 0.01
     {
         set currentStage to ship:stageNum.
         ResetRunningAverage().

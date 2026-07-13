@@ -5,16 +5,19 @@ global function GetEnginesData
     local parameter engines is ship:engines.
 
     local data is Lexicon(
-        "slThrust", 0,
-        "vacuumThrust", 0,
-        "massFlow", 0
+        "maxSlThrust", 0,
+        "maxVacuumThrust", 0,
+        "maxMassFlow", 0,
+        "minSlThrust", 0,
+        "minVacuumThrust", 0,
+        "minMassFlow", 0
     ).
 
     FOR engine in engines
     {
-        set data["slThrust"] to data["slThrust"] + engine:possibleThrustAt(1).
-        set data["vacuumThrust"] to data["vacuumThrust"] + engine:possibleThrustAt(0).
-        set data["massFlow"] to data["massFlow"] + engine:maxMassFlow * engine:thrustLimit / 100.
+        set data["maxSlThrust"] to data["maxSlThrust"] + engine:possibleThrustAt(1).
+        set data["maxVacuumThrust"] to data["maxVacuumThrust"] + engine:possibleThrustAt(0).
+        set data["maxMassFlow"] to data["maxMassFlow"] + engine:maxMassFlow * engine:thrustLimit / 100.
     }
 
     return data.

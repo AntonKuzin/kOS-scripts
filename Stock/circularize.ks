@@ -29,11 +29,11 @@ local integrator is CreateBurnIntegrator(shipState, stateChangeSources, stagesDa
         set aimCorrectionVector to targetOrbitalSpeedVector - shipState["velocityVector"].
         return aimCorrectionVector:mag / (shipState["engineAccelerationVector"]:mag * 2).
     }).
-set stateChangeSources["thrustDelegate"] to { local parameter state. return -aimCandidateVector:normalized * stagesData[integrator["currentStage"]]["totalVacuumThrust"]. }.
+set stateChangeSources["thrustDelegate"] to { local parameter state. return -aimCandidateVector:normalized * stagesData[integrator["currentStage"]]["maxVacuumThrust"]. }.
 local function RunPredictorCorrectorIteration
 {
     set currentStage to ship:stageNum.
-    set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
+    set stateChangeSources["massFlow"] to stagesData[currentStage]["maxMassFlow"].
     
     integrator["run"]().
     
@@ -87,7 +87,7 @@ local acceleration is ship:thrust / ship:mass.
 until (targetOrbitalSpeedVector - velocity:orbit):mag < 10
 {
     until ship:mass > stagesData[ship:stageNum]["endMass"]
-        or stagesData[ship:stageNum]["massFlow"] > 0
+        or stagesData[ship:stageNum]["maxMassFlow"] > 0
         or ship:stageNum = 0
     {
         stage.
@@ -147,11 +147,11 @@ local function GetBurnTime
     until deltaVToBurn <= 0 or stageToUse < 0
     {
         set stageDeltaV to 0.
-        if stagesData[stageToUse]["massFlow"] > 0
+        if stagesData[stageToUse]["maxMassFlow"] > 0
         {
-            set exhaustVelocity to stagesData[stageToUse]["totalVacuumThrust"] / stagesData[stageToUse]["massFlow"].
+            set exhaustVelocity to stagesData[stageToUse]["maxVacuumThrust"] / stagesData[stageToUse]["maxMassFlow"].
             set stageDeltaV to exhaustVelocity * ln(stagesData[stageToUse]["totalMass"] / stagesData[stageToUse]["endMass"]).
-            set burnTime to burnTime + -stagesData[stageToUse]["totalMass"] * (1 - constant:e ^ (min(stageDeltaV, deltaVToBurn) / exhaustVelocity)) / stagesData[stageToUse]["massFlow"].
+            set burnTime to burnTime + -stagesData[stageToUse]["totalMass"] * (1 - constant:e ^ (min(stageDeltaV, deltaVToBurn) / exhaustVelocity)) / stagesData[stageToUse]["maxMassFlow"].
         }
 
         set deltaVToBurn to deltaVToBurn - stageDeltaV.

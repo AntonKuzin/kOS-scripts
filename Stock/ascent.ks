@@ -67,7 +67,7 @@ until orbit:apoapsis >= targetAltitude
     set currentStage to ship:stageNum.
 
     UpdateShipState(shipState).
-    set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
+    set stateChangeSources["massFlow"] to stagesData[currentStage]["maxMassFlow"].
 
     if ship:velocity:surface:mag > 1
         integrator["run"]().

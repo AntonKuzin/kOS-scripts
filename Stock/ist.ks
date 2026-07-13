@@ -16,8 +16,8 @@ local stateChangeSources is CreateStateChangeSources().
 local integrator is CreateBurnIntegrator(shipState, stateChangeSources, stagesData, 8,
     { return shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1. },
     { return shipState["surfaceVelocityVector"]:mag / shipState["engineAccelerationVector"]:mag. }).
-set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * stagesData[integrator["currentStage"]]["totalVacuumThrust"]. }.
-set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
+set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * stagesData[integrator["currentStage"]]["maxVacuumThrust"]. }.
+set stateChangeSources["massFlow"] to stagesData[currentStage]["maxMassFlow"].
 
 local landingSpot is ship:geoposition.
 VecDrawArgs(
@@ -54,7 +54,7 @@ until false
 {
     set currentStage to ship:stageNum.
     //set stagesData to GetStagesData().
-    set stateChangeSources["massFlow"] to stagesData[currentStage]["massFlow"].
+    set stateChangeSources["massFlow"] to stagesData[currentStage]["maxMassFlow"].
 
     set shipState["mass"] to ship:mass.
     set shipState["radiusVector"] to PositionAt(ship, ititialTime + timeGuess) - body:position.

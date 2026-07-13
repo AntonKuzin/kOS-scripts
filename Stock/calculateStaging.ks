@@ -15,9 +15,12 @@ global function GetStagesData
     FROM {local i is 0.} UNTIL i > ship:stageNum STEP {set i to i + 1.} DO 
     {
         stagesData:Add(Lexicon(
-            "totalVacuumThrust", 0,
-            "totalSLThrust", 0,
-            "massFlow", 0,
+            "maxVacuumThrust", 0,
+            "maxSlThrust", 0,
+            "maxMassFlow", 0,
+            "minVacuumThrust", 0,
+            "minSlThrust", 0,
+            "minMassFlow", 0,
             "totalMass", 0,
             "fuelMass", 0,
             "endMass", 0,
@@ -221,30 +224,33 @@ local function SimulateFuelFlow
         local upperStageBurningFuelSimultaneously is 0.
 
         local enginesData is GetEnginesData(stagesData[i]["enginesDrainingFromTanksDroppedInCurrentStage"]).
-        if enginesData["massFlow"] > 0
+        if enginesData["maxMassFlow"] > 0
         {
-            set totalMassFlow to enginesData["massFlow"].
+            set totalMassFlow to enginesData["maxMassFlow"].
             set burnTime to stagesData[i]["fuelMass"] / totalMassFlow.
         }
 
         for engine in stagesData[i]["allActiveEngines"]
         {
             set enginesData to GetEnginesData(List(engine)).
-            set stagesData[i]["totalVacuumThrust"] to stagesData[i]["totalVacuumThrust"] + enginesData["vacuumThrust"].
-            set stagesData[i]["totalSLThrust"] to stagesData[i]["totalSLThrust"] + enginesData["slThrust"].
+            set stagesData[i]["maxVacuumThrust"] to stagesData[i]["maxVacuumThrust"] + enginesData["maxVacuumThrust"].
+            set stagesData[i]["maxSlThrust"] to stagesData[i]["maxSlThrust"] + enginesData["maxSlThrust"].
+            set stagesData[i]["minVacuumThrust"] to stagesData[i]["minVacuumThrust"] + enginesData["minVacuumThrust"].
+            set stagesData[i]["minSlThrust"] to stagesData[i]["minSlThrust"] + enginesData["minSlThrust"].
+            set stagesData[i]["minMassFlow"] to stagesData[i]["minMassFlow"] + enginesData["minMassFlow"].
 
             if stagesData[i]["enginesDrainingFromTanksDroppedInCurrentStage"]:Contains(engine) = false
             {
                 set upperStageBurningFuelSimultaneously to partToStageMap[engine].
-                set totalMassFlow to totalMassFlow + enginesData["massFlow"].
-                set fuelMassBurnedInUpperStage to burnTime * enginesData["massFlow"].
+                set totalMassFlow to totalMassFlow + enginesData["maxMassFlow"].
+                set fuelMassBurnedInUpperStage to burnTime * enginesData["maxMassFlow"].
                 set stagesData[i]["fuelMass"] to stagesData[i]["fuelMass"] + fuelMassBurnedInUpperStage.
                 set stagesData[i]["totalMass"] to stagesData[i]["totalMass"] + fuelMassBurnedInUpperStage.
                 
                 set stagesData[upperStageBurningFuelSimultaneously]["fuelMass"] to stagesData[upperStageBurningFuelSimultaneously]["fuelMass"] - fuelMassBurnedInUpperStage.
                 set stagesData[upperStageBurningFuelSimultaneously]["totalMass"] to stagesData[upperStageBurningFuelSimultaneously]["totalMass"] - fuelMassBurnedInUpperStage.
             }
-            set stagesData[i]["massFlow"] to totalMassFlow.
+            set stagesData[i]["maxMassFlow"] to totalMassFlow.
         }
         
         set stagesData[i]["endMass"] to stagesData[i]["totalMass"] - stagesData[i]["fuelMass"].
@@ -314,8 +320,8 @@ local function PrintData
         print "Stage №: " + i.
         print "   Wet mass: " + Round(stagesData[i]["totalMass"], 3).
         print "   Dry mass: " + Round(stagesData[i]["endMass"], 3).
-        print "   SL thrust: " + Round(stagesData[i]["totalSLThrust"], 3).
-        print "   Vacuum thrust: " + Round(stagesData[i]["totalVacuumThrust"], 3).
-        print "   Mass flow: " + Round(stagesData[i]["massFlow"], 3).
+        print "   SL thrust: " + Round(stagesData[i]["maxSlThrust"], 3).
+        print "   Vacuum thrust: " + Round(stagesData[i]["maxVacuumThrust"], 3).
+        print "   Mass flow: " + Round(stagesData[i]["maxMassFlow"], 3).
     }
 }
