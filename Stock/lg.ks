@@ -15,7 +15,7 @@ local shipState is CreateShipState().
 local stateChangeSources is CreateStateChangeSources().
 local integrator is CreateBurnIntegrator(shipState, stateChangeSources, stagesData, 8,
     { return shipState["surfaceVelocityVector"]:mag < 1 or (shipState["altitude"] - shipState["surfaceCoordinates"]:terrainHeight) < 1. },
-    { return shipState["surfaceVelocityVector"]:mag / shipState["engineAccelerationVector"]:mag. }).
+    { return shipState["surfaceVelocityVector"]:mag / shipState["engineAccelerationVector"]:mag * 0.8. }).
 set stateChangeSources["thrustDelegate"] to { local parameter state. return state["surfaceVelocityVector"]:normalized * stagesData[integrator["currentStage"]]["maxVacuumThrust"]. }.
 set stateChangeSources["massFlow"] to stagesData[currentStage]["maxMassFlow"].
 
@@ -40,7 +40,6 @@ until ship:status = "Landed"
         set runningAverageEngineStats to GetRunningAverage(stagesData[currentStage]["allActiveEngines"]).
         set stagesData[currentStage]["maxVacuumThrust"] to runningAverageEngineStats["thrust"].
         set stagesData[currentStage]["maxMassFlow"] to runningAverageEngineStats["massFlow"].
-        print stagesData[currentStage]["maxVacuumThrust"].
     }
     UpdateShipState(shipState).
     set stateChangeSources["massFlow"] to stagesData[currentStage]["maxMassFlow"].

@@ -22,15 +22,8 @@ global function CreateBurnIntegrator
         set iterations to 0.
 
         set integrator["currentStage"] to ship:stageNum.
-        until burnEndCriterion() or iterations > integrationSteps * 2
+        until burnEndCriterion() or iterations > integrationSteps * 2 or (shipState["mass"] - stagesData[0]["endMass"] < 0.001)
         {
-            until shipState["mass"] > stagesData[integrator["currentStage"]]["endMass"] or integrator["currentStage"] = 0
-            {
-                set integrator["currentStage"] to integrator["currentStage"] - 1.
-                set shipState["mass"] to stagesData[integrator["currentStage"]]["totalMass"].
-                set stateChangeSources["massFlow"] to stagesData[integrator["currentStage"]]["maxMassFlow"].
-            }
-
             set clampedTimeStep to Min(integrator["timeStep"], timeStepLimiter()).
             set clampedTimeStep to Min(clampedTimeStep, Max((shipState["mass"] - stagesData[integrator["currentStage"]]["endMass"]), 0.001) / stateChangeSources["massFlow"]).
             if ship:altitude < 100000
@@ -42,6 +35,13 @@ global function CreateBurnIntegrator
             set integrator["deltaVRequired"] to integrator["deltaVRequired"] + shipState["engineAccelerationVector"]:mag * clampedTimeStep.
 
             set iterations to iterations + 1.
+
+            until shipState["mass"] - stagesData[integrator["currentStage"]]["endMass"] > 0.001 or integrator["currentStage"] = 0
+            {
+                set integrator["currentStage"] to integrator["currentStage"] - 1.
+                set shipState["mass"] to stagesData[integrator["currentStage"]]["totalMass"].
+                set stateChangeSources["massFlow"] to stagesData[integrator["currentStage"]]["maxMassFlow"].
+            }
         }
         set integrator["timeStep"] to Max(integrator["timeRequired"] / integrationSteps, 0.1).
     }
